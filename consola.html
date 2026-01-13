@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plot Center - Consola de Nave</title>
+
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#00ff00"/>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Plot Center">
+    <meta name="description" content="Sistema Matrix - Consola de Sonidos de Nave Espacial con IA.">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@300;500;700&display=swap');
+        
+        :root {
+            --primary: #00ff41;
+            --primary-dim: rgba(0, 255, 65, 0.1);
+            --primary-glow: rgba(0, 255, 65, 0.6);
+            --secondary: #00d2ff;
+            --secondary-dim: rgba(0, 210, 255, 0.1);
+            --danger: #ff0040;
+            --danger-dim: rgba(255, 0, 64, 0.1);
+            --bg-dark: #050505;
+            --panel-bg: rgba(10, 15, 10, 0.75);
+            --scanline-color: rgba(0, 255, 0, 0.03);
+            --glass: 10px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background: var(--bg-dark);
+            color: var(--primary);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2vmin;
+            overflow: hidden;
+        }
+        
+        /* Background Effects */
+        #matrixCanvas {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 1;
+            opacity: 0.6;
+        }
+
+        .scanlines {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(to bottom, var(--scanline-color) 50%, transparent 50%);
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 999;
+        }
+        
+        .container {
+            background: var(--panel-bg);
+            border: 1px solid var(--primary);
+            border-radius: 20px;
+            padding: 3vmin;
+            width: 100%;
+            max-width: 1000px;
+            max-height: 95vh;
+            overflow-y: auto;
+            text-align: center;
+            box-shadow: 0 0 30px rgba(0, 255, 65, 0.15), inset 0 0 20px rgba(0, 255, 65, 0.05);
+            position: relative;
+            z-index: 10;
+            backdrop-filter: blur(var(--glass));
+            -webkit-backdrop-filter: blur(var(--glass));
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Scrollbar aesthetics */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(0,255,0,0.05); }
+        ::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 4px; }
+        
+        .title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: clamp(2rem, 5vw, 4rem);
+            font-weight: 900;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 0 15px var(--primary);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+        
+        .subtitle {
+            font-size: clamp(1rem, 2vw, 1.5rem);
+            margin-bottom: 2rem;
+            color: var(--secondary);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            border-bottom: 1px solid var(--secondary-dim);
+            padding-bottom: 1rem;
+            display: inline-block;
+        }
+        
+        .soundboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 1.5rem;
+            margin: 1rem 0;
+            flex-grow: 1;
+        }
+        
+        /* Mobile/Tablet Adjustments */
+        @media (max-width: 768px) {
+            .soundboard-grid {
+                grid-template-columns: repeat(2, 1fr); /* 2 columns on phones/small tablets */
+                gap: 1rem;
+            }
+            .container { padding: 1.5rem; }
+        }
+
+        button.sound-btn {
+            background: rgba(0, 20, 0, 0.6);
+            color: var(--primary);
+            border: 1px solid var(--primary);
+            padding: 1rem;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: 700;
+            font-family: 'Orbitron', monospace;
+            transition: all 0.25s ease;
+            min-height: 90px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            text-transform: uppercase;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        /* Glitch/Hover Effect */
+        button.sound-btn::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 255, 65, 0.2), transparent);
+            transition: 0.5s;
+        }
+        
+        button.sound-btn:hover::before {
+            left: 100%;
+        }
+        
+        button.sound-btn:hover {
+            background: var(--primary-dim);
+            box-shadow: 0 0 20px var(--primary-glow);
+            transform: translateY(-2px);
+            text-shadow: 0 0 8px var(--primary);
+        }
+
+        button.sound-btn:active {
+            transform: translateY(1px);
+        }
+
+        button.sound-btn.active {
+            background: var(--primary);
+            color: #000;
+            box-shadow: 0 0 25px var(--primary);
+        }
+        
+        button.sound-btn.danger { border-color: var(--danger); color: var(--danger); }
+        button.sound-btn.danger:hover { background: var(--danger-dim); box-shadow: 0 0 20px var(--danger); color: #fff; text-shadow: 0 0 10px var(--danger); }
+        
+        button.sound-btn.secondary { border-color: var(--secondary); color: var(--secondary); }
+        button.sound-btn.secondary:hover { background: var(--secondary-dim); box-shadow: 0 0 20px var(--secondary); color: #fff; text-shadow: 0 0 10px var(--secondary); }
+        
+        .status {
+            margin-top: 2rem; 
+            color: var(--primary); 
+            font-size: 1.1rem;
+            font-family: 'Orbitron', monospace; 
+            padding: 1rem; 
+            border-top: 1px solid var(--primary-dim);
+            border-bottom: 1px solid var(--primary-dim);
+            background: linear-gradient(90deg, transparent, rgba(0, 255, 65, 0.05), transparent);
+        }
+        
+        /* Modal Styles */
+        .modal-container {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(5px);
+            z-index: 100;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+        }
+        
+        .modal-window {
+            width: 100%; max-width: 800px;
+            height: 85vh;
+            background: rgba(5, 10, 5, 0.95);
+            border: 1px solid var(--primary);
+            border-radius: 15px;
+            box-shadow: 0 0 40px rgba(0, 255, 65, 0.2);
+            display: flex;
+            flex-direction: column;
+            padding: 1.5rem;
+            position: relative;
+        }
+
+        /* Modal Header Decoration */
+        .modal-window::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 4px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+        }
+
+        .ai-visualizer {
+            height: 150px;
+            margin-bottom: 1rem;
+            border: 1px solid var(--primary-dim);
+            border-radius: 8px;
+            background: rgba(0,0,0,0.5);
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+        }
+        
+        #ai-canvas { width: 100%; height: 100%; }
+        
+        .ai-chat-log {
+            flex-grow: 1; overflow-y: auto; 
+            border: 1px solid var(--primary-dim);
+            background: rgba(0, 20, 0, 0.3);
+            border-radius: 8px; padding: 1.5rem; margin-bottom: 1rem;
+            font-family: 'Rajdhani', monospace;
+            font-size: 1.1rem;
+        }
+        
+        .ai-chat-log p { margin-bottom: 1rem; line-height: 1.6; }
+        .ai-chat-log .user-msg { color: var(--secondary); text-align: right; border-right: 2px solid var(--secondary); padding-right: 10px; }
+        .ai-chat-log .ai-msg { color: var(--primary); text-align: left; border-left: 2px solid var(--primary); padding-left: 10px; }
+        
+        .ai-input-area { display: flex; gap: 10px; height: 50px; }
+        
+        #ai-input, #log-topic-input {
+            flex-grow: 1; background: rgba(0,0,0,0.5); 
+            border: 1px solid var(--primary);
+            color: #fff; padding: 0 1rem; border-radius: 5px;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1.1rem;
+        }
+        
+        #ai-input:focus, #log-topic-input:focus { outline: none; box-shadow: 0 0 10px var(--primary-dim); }
+
+        .action-btn {
+            background: rgba(0, 255, 65, 0.1); 
+            border: 1px solid var(--primary); 
+            color: var(--primary);
+            padding: 0 1.5rem; border-radius: 5px; cursor: pointer; 
+            font-family: 'Orbitron', monospace;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .action-btn:hover { background: var(--primary); color: #000; }
+        .action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        #ai-mic-btn { border-color: var(--secondary); color: var(--secondary); width: 50px; }
+        #ai-mic-btn.active { background: var(--danger); color: #fff; border-color: var(--danger); animation: pulse 1s infinite; }
+        
+        .modal-close-btn { 
+            margin-top: 1rem; 
+            padding: 1rem; 
+            width: 100%;
+            background: transparent;
+            border: 1px solid var(--danger);
+            color: var(--danger);
+            font-family: 'Orbitron', monospace;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .modal-close-btn:hover { background: var(--danger); color: #fff; }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 5px var(--danger); }
+            50% { box-shadow: 0 0 20px var(--danger); }
+            100% { box-shadow: 0 0 5px var(--danger); }
+        }
+        
+        /* Log Generator Styles */
+        .log-display-area {
+            flex-grow: 1; overflow-y: auto; 
+            border: 1px solid var(--primary-dim);
+            background: rgba(0,0,0,0.4);
+            border-radius: 8px; padding: 1.5rem; margin: 10px 0;
+            font-family: 'Rajdhani', monospace; line-height: 1.6;
+            color: #eee;
+        }
+
+        /* Screensaver */
+        #screensaver {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 2000;
+            display: none; justify-content: center; align-items: center;
+            flex-direction: column; cursor: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="scanlines"></div>
+    <canvas id="matrixCanvas"></canvas>
+    
+    <div class="container">
+        <h1 class="title">PLOT CENTER</h1>
+        <p class="subtitle">CONSOLA DE NAVE OMEGA</p>
+        <div class="soundboard-grid" id="soundboard"></div>
+        <div class="status" id="status">🔋 SISTEMAS EN ESPERA</div>
+    </div>
+
+    <!-- AI Chat Window -->
+    <div id="ai-chat-container" class="modal-container">
+        <div class="modal-window">
+            <h3 style="font-family: 'Orbitron'; color: var(--primary); margin-bottom: 10px;">COMUNICACIÓN IA</h3>
+            <div class="ai-visualizer">
+                <canvas id="ai-canvas"></canvas>
+            </div>
+            <div class="ai-chat-log" id="ai-chat-log">
+                <p class="ai-msg">IA: Soy PLOT AI v2.5. Sistemas en línea.</p>
+            </div>
+            <div class="ai-input-area">
+                <input type="text" id="ai-input" placeholder="Comando o consulta...">
+                <button id="ai-mic-btn" class="action-btn">🎤</button>
+                <button id="ai-send-btn" class="action-btn">ENVIAR</button>
+            </div>
+            <button id="ai-close-btn" class="modal-close-btn">FINALIZAR TRANSMISIÓN</button>
+        </div>
+    </div>
+
+    <!-- Commander's Log Generator Window -->
+    <div id="log-generator-container" class="modal-container">
+        <div class="modal-window">
+            <h3 style="font-family: 'Orbitron'; color: var(--secondary); margin-bottom: 15px;">✨ GENERADOR DE BITÁCORA</h3>
+            <p class="log-instructions" style="color: #aaa;">Introduce el evento o tema del día:</p>
+            <input type="text" id="log-topic-input" placeholder="Ej: Anomalía en el sector 7...">
+            <div style="display:flex; justify-content:flex-end; margin-top:10px;">
+                <button id="log-generate-btn" class="action-btn">GENERAR ENTRADA</button>
+            </div>
+            <div class="log-display-area" id="log-display-area">
+                <p>Esperando datos...</p>
+            </div>
+            <button id="log-read-btn" class="action-btn" style="display: none; margin-bottom: 10px;">LEER EN VOZ ALTA</button>
+            <button id="log-close-btn" class="modal-close-btn">CERRAR</button>
+        </div>
+    </div>
+
+    <!-- Screensaver -->
+    <div id="screensaver">
+        <div class="screensaver-content">
+            <h1>PLOT CENTER</h1>
+            <p>MODO REPOSO</p>
+            <p><small>Mueve el mouse o presiona una tecla para reactivar</small></p>
+        </div>
+    </div>
+
+
+    <script>
+        let audioContext = null;
+        let backgroundAudio = null;
+        let recognition = null;
+        let isRecognizing = false;
+        let isAiSpeaking = false;
+        let inactivityTimer;
+        
+        const soundboardButtons = [
+            { label: 'CONTACTAR IA', action: showAiChat, style: 'primary' },
+            { label: '✨ GENERAR BITÁCORA', action: showLogGenerator, style: 'primary' },
+            { label: 'AMBIENTE', action: toggleAmbience, style: 'secondary', id: 'ambienceBtn' },
+            { label: 'BIENVENIDA', action: () => openExternalLink('https://voz.plotcenter.com.ar/'), style: 'secondary' },
+            { label: 'PRESURIZACIÓN', action: createPressurizationSound, style: 'secondary' },
+            { label: '+sonidos', action: () => openExternalLink('https://experiencia.plotcenter.com.ar/sonidos.html'), style: 'secondary' },
+            { label: 'MOTOR WARP', action: createWarpSound, style: 'secondary' },
+            { label: 'DESPEGUE', action: createTakeoffEffect, style: 'secondary' },
+            { label: 'ATERRIZAJE', action: createLandingSequence, style: 'secondary' },
+            { label: 'PANTALLA COMPLETA', action: toggleFullScreen, style: 'secondary' },
+            { label: 'ALERTA ROJA', action: createRedAlertSound, style: 'danger' },
+            { label: 'SILENCIO TOTAL', action: stopAllSounds, style: 'danger' }
+        ];
+
+        function initAudio() {
+            if (!audioContext || audioContext.state === 'closed') {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+            return audioContext;
+        }
+
+        function stopAllSounds() {
+            speechSynthesis.cancel();
+            if (isRecognizing) recognition.stop();
+            stopAmbience();
+            if(audioContext) {
+                audioContext.close().then(() => initAudio());
+            }
+            document.getElementById('status').textContent = '⏹️ SILENCIO TOTAL. Sistemas detenidos.';
+            document.getElementById('ambienceBtn')?.classList.remove('active');
+        }
+
+        function renderSoundboard() {
+            const grid = document.getElementById('soundboard');
+            grid.innerHTML = '';
+            soundboardButtons.forEach(btnData => {
+                const button = document.createElement('button');
+                button.textContent = btnData.label;
+                button.className = 'sound-btn';
+                if (btnData.style === 'danger') button.classList.add('danger');
+                if (btnData.style === 'secondary') button.classList.add('secondary');
+                if (btnData.id) button.id = btnData.id;
+                button.onclick = () => { initAudio(); btnData.action(); };
+                grid.appendChild(button);
+            });
+        }
+        
+        function openExternalLink(url) {
+            window.open(url, '_blank');
+            document.getElementById('status').textContent = `🔗 ABRIENDO ENLACE EXTERNO...`;
+        }
+        
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+                });
+                document.getElementById('status').textContent = '🖥️ MODO PANTALLA COMPLETA ACTIVADO.';
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                    document.getElementById('status').textContent = '🖥️ MODO PANTALLA COMPLETA DESACTIVADO.';
+                }
+            }
+        }
+
+        function speak(text, onEndCallback) {
+            speechSynthesis.cancel(); // Stop any previous speech
+            const utterance = new SpeechSynthesisUtterance(text);
+            const voices = speechSynthesis.getVoices();
+            
+            let selectedVoice = voices.find(v => v.lang.startsWith('es-LA') || v.lang.startsWith('es-ES')) || voices.find(v => v.lang.startsWith('es')) || voices[0];
+
+            utterance.voice = selectedVoice;
+            utterance.pitch = 0.8;
+            utterance.rate = 0.9;
+            utterance.volume = 1.0;
+            utterance.onstart = () => { isAiSpeaking = true; };
+            utterance.onend = () => {
+                isAiSpeaking = false;
+                if (onEndCallback) onEndCallback();
+            };
+            speechSynthesis.speak(utterance);
+        }
+
+        function toggleAmbience() {
+            const btn = document.getElementById('ambienceBtn');
+            if (backgroundAudio) {
+                stopAmbience();
+                btn.classList.remove('active');
+                document.getElementById('status').textContent = '🔇 AMBIENTE DESACTIVADO.';
+            } else {
+                createAmbience();
+                btn.classList.add('active');
+                document.getElementById('status').textContent = '🛰️ AMBIENTE DE NAVE ACTIVADO.';
+            }
+        }
+
+        function createAmbience() {
+            if (backgroundAudio) return;
+            try {
+                const ctx = initAudio();
+                const buffer = ctx.createBuffer(2, ctx.sampleRate * 15, ctx.sampleRate);
+                for (let ch = 0; ch < 2; ch++) {
+                    const data = buffer.getChannelData(ch);
+                    for (let i = 0; i < data.length; i++) {
+                        const m = Math.sin(2 * Math.PI * 45 * i / ctx.sampleRate) * 0.2;
+                        const v = Math.sin(2 * Math.PI * 200 * i / ctx.sampleRate) * 0.08;
+                        const s = (Math.random() - 0.5) * 0.06;
+                        data[i] = m + v + s;
+                    }
+                }
+                backgroundAudio = ctx.createBufferSource();
+                backgroundAudio.buffer = buffer; backgroundAudio.loop = true;
+                const filter = ctx.createBiquadFilter();
+                filter.type = 'lowpass'; filter.frequency.value = 1500;
+                const gain = ctx.createGain(); gain.gain.value = 0.25;
+                backgroundAudio.connect(filter); filter.connect(gain); gain.connect(ctx.destination);
+                backgroundAudio.start();
+            } catch (e) { console.error("Error creating ambience:", e); }
+        }
+        
+        function stopAmbience() {
+            if (backgroundAudio) { try { backgroundAudio.stop(); } catch (e) {} backgroundAudio = null; }
+        }
+        
+        function createTakeoffEffect() {
+            document.getElementById('status').textContent = '🚀 INICIANDO SECUENCIA DE DESPEGUE...';
+            try {
+                const ctx = initAudio(); const duration = 8;
+                const mainEngine = ctx.createOscillator(); const mainGain = ctx.createGain();
+                mainEngine.connect(mainGain); mainGain.connect(ctx.destination);
+                mainEngine.type = 'sawtooth';
+                mainEngine.frequency.setValueAtTime(25, ctx.currentTime);
+                mainEngine.frequency.exponentialRampToValueAtTime(150, ctx.currentTime + duration);
+                mainGain.gain.setValueAtTime(0, ctx.currentTime);
+                mainGain.gain.linearRampToValueAtTime(0.4, ctx.currentTime + 2);
+                mainGain.gain.linearRampToValueAtTime(0.7, ctx.currentTime + 5);
+                mainGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+                mainEngine.start(); mainEngine.stop(ctx.currentTime + duration);
+                mainEngine.onended = () => { document.getElementById('status').textContent = '✅ SECUENCIA DE DESPEGUE FINALIZADA.'; }
+            } catch (e) { console.error("Error creating takeoff effect:", e); }
+        }
+
+        function createRedAlertSound() {
+            document.getElementById('status').textContent = '🚨 ALERTA ROJA ACTIVADA 🚨';
+            const ctx = initAudio();
+            let count = 0;
+            const interval = setInterval(() => {
+                if (count >= 6) {
+                    clearInterval(interval);
+                    return;
+                }
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.type = 'sine';
+                osc.frequency.value = count % 2 === 0 ? 900 : 700;
+                gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.5);
+                count++;
+            }, 500);
+        }
+
+        function createShieldsSound() {
+            document.getElementById('status').textContent = '🛡️ ACTIVANDO ESCUDOS...';
+            const ctx = initAudio();
+            const noise = ctx.createBufferSource();
+            const buffer = ctx.createBuffer(1, ctx.sampleRate * 1, ctx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < data.length; i++) {
+                data[i] = Math.random() * 2 - 1;
+            }
+            noise.buffer = buffer;
+            const filter = ctx.createBiquadFilter();
+            filter.type = 'bandpass';
+            filter.frequency.setValueAtTime(100, ctx.currentTime);
+            filter.frequency.exponentialRampToValueAtTime(4000, ctx.currentTime + 0.8);
+            filter.Q.value = 20;
+            const gain = ctx.createGain();
+            gain.gain.setValueAtTime(0.5, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1);
+            noise.connect(filter);
+            filter.connect(gain);
+            gain.connect(ctx.destination);
+            noise.start();
+            noise.stop(ctx.currentTime + 1);
+        }
+
+        function createWarpSound() {
+            document.getElementById('status').textContent = '🌀 INICIANDO MOTOR WARP...';
+            const ctx = initAudio();
+            const duration = 4;
+            // Charge up sound
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(100, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + duration - 0.5);
+            gain.gain.setValueAtTime(0, ctx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.4, ctx.currentTime + duration - 1);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+            osc.start();
+            osc.stop(ctx.currentTime + duration);
+            // Jump sound
+            setTimeout(() => {
+                document.getElementById('status').textContent = '💫 SALTO WARP COMPLETADO.';
+                createShieldsSound(); // Re-use for a cool "jump" effect
+            }, (duration - 0.2) * 1000);
+        }
+
+        function createPressurizationSound() {
+            document.getElementById('status').textContent = '💨 PRESURIZANDO ESCLUSA...';
+            const ctx = initAudio();
+            const duration = 3;
+            // Hissing sound
+            const noise = ctx.createBufferSource();
+            const buffer = ctx.createBuffer(1, ctx.sampleRate * duration, ctx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < data.length; i++) { data[i] = Math.random() * 2 - 1; }
+            noise.buffer = buffer;
+            const filter = ctx.createBiquadFilter();
+            filter.type = 'highpass';
+            filter.frequency.setValueAtTime(400, ctx.currentTime);
+            filter.frequency.linearRampToValueAtTime(2000, ctx.currentTime + duration);
+            const gain = ctx.createGain();
+            gain.gain.setValueAtTime(0, ctx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.2);
+            gain.gain.linearRampToValueAtTime(0, ctx.currentTime + duration);
+            noise.connect(filter);
+            filter.connect(gain);
+            gain.connect(ctx.destination);
+            noise.start();
+            noise.stop(ctx.currentTime + duration);
+            // Lock sound
+            setTimeout(() => {
+                const lockOsc = ctx.createOscillator();
+                lockOsc.type = 'square';
+                lockOsc.frequency.value = 800;
+                const lockGain = ctx.createGain();
+                lockGain.gain.setValueAtTime(0.3, ctx.currentTime);
+                lockGain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+                lockOsc.connect(lockGain);
+                lockGain.connect(ctx.destination);
+                lockOsc.start();
+                lockOsc.stop(ctx.currentTime + 0.1);
+                document.getElementById('status').textContent = '✅ ESCLUSA SELLADA.';
+            }, (duration - 0.2) * 1000);
+        }
+        
+        function createLandingSequence() {
+            document.getElementById('status').textContent = '🛬 INICIANDO SECUENCIA DE ATERRIZAJE...';
+            const ctx = initAudio();
+            const totalDuration = 87; // 1 minute 27 seconds
+            const now = ctx.currentTime;
+            
+            // --- Phase 1: Re-entry (0-20s) ---
+            const reEntryNoise = ctx.createBufferSource();
+            const bufferSize = ctx.sampleRate * 20;
+            const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) { data[i] = Math.random() * 2 - 1; }
+            reEntryNoise.buffer = buffer;
+            reEntryNoise.loop = true;
+            const reEntryFilter = ctx.createBiquadFilter();
+            reEntryFilter.type = 'bandpass';
+            reEntryFilter.Q.value = 10;
+            reEntryFilter.frequency.setValueAtTime(8000, now);
+            reEntryFilter.frequency.exponentialRampToValueAtTime(400, now + 20);
+            const reEntryGain = ctx.createGain();
+            reEntryGain.gain.setValueAtTime(0, now);
+            reEntryGain.gain.linearRampToValueAtTime(0.5, now + 5);
+            reEntryGain.gain.linearRampToValueAtTime(0, now + 20);
+            reEntryNoise.connect(reEntryFilter);
+            reEntryFilter.connect(reEntryGain);
+            reEntryGain.connect(ctx.destination);
+            reEntryNoise.start(now);
+            reEntryNoise.stop(now + 20);
+
+            // --- Phase 2: Deceleration Thrusters (20-50s) ---
+            const thrusterOsc = ctx.createOscillator();
+            thrusterOsc.type = 'sawtooth';
+            thrusterOsc.frequency.setValueAtTime(500, now + 20);
+            thrusterOsc.frequency.exponentialRampToValueAtTime(100, now + 50);
+            const thrusterGain = ctx.createGain();
+            const lfo = ctx.createOscillator(); // LFO for pulsing effect
+            lfo.frequency.value = 5;
+            const lfoGain = ctx.createGain();
+            lfoGain.gain.value = 0.4;
+            lfo.connect(lfoGain);
+            lfoGain.connect(thrusterGain.gain);
+            thrusterGain.gain.setValueAtTime(0.5, now + 20);
+            thrusterGain.gain.exponentialRampToValueAtTime(0.001, now + 50);
+            thrusterOsc.connect(thrusterGain);
+            thrusterGain.connect(ctx.destination);
+            lfo.start(now + 20);
+            lfo.stop(now + 50);
+            thrusterOsc.start(now + 20);
+            thrusterOsc.stop(now + 50);
+
+            // --- Phase 3: Landing Gear & Systems (50-70s) ---
+            // Landing gear deploy sound
+            setTimeout(() => {
+                document.getElementById('status').textContent = '⚙️ TREN DE ATERRIZAJE DESPLEGADO...';
+                const gearOsc = ctx.createOscillator();
+                gearOsc.type = 'square';
+                gearOsc.frequency.setValueAtTime(200, ctx.currentTime);
+                gearOsc.frequency.exponentialRampToValueAtTime(50, ctx.currentTime + 2);
+                const gearGain = ctx.createGain();
+                gearGain.gain.setValueAtTime(0.4, ctx.currentTime);
+                gearGain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 2);
+                gearOsc.connect(gearGain);
+                gearGain.connect(ctx.destination);
+                gearOsc.start();
+                gearOsc.stop(ctx.currentTime + 2);
+            }, 52 * 1000);
+
+            // Computer beeps
+            setTimeout(() => {
+                let beepCount = 0;
+                const beepInterval = setInterval(() => {
+                    if (beepCount++ > 5) clearInterval(beepInterval);
+                    const bOsc = ctx.createOscillator();
+                    bOsc.frequency.value = 1200 + Math.random() * 500;
+                    const bGain = ctx.createGain();
+                    bGain.gain.setValueAtTime(0.2, ctx.currentTime);
+                    bGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+                    bOsc.connect(bGain);
+                    bGain.connect(ctx.destination);
+                    bOsc.start();
+                    bOsc.stop(ctx.currentTime + 0.1);
+                }, 800);
+            }, 60 * 1000);
+
+            // --- Phase 4: Touchdown & Power Down (70-87s) ---
+            // Touchdown
+            setTimeout(() => {
+                document.getElementById('status').textContent = '✅ CONTACTO. ATERRIZAJE CONFIRMADO.';
+                const touchOsc = ctx.createOscillator();
+                touchOsc.frequency.value = 40;
+                const touchGain = ctx.createGain();
+                touchGain.gain.setValueAtTime(0.8, ctx.currentTime);
+                touchGain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 1.5);
+                touchOsc.connect(touchGain);
+                touchGain.connect(ctx.destination);
+                touchOsc.start();
+                touchOsc.stop(ctx.currentTime + 1.5);
+            }, 75 * 1000);
+
+            // Power down
+            setTimeout(() => {
+                document.getElementById('status').textContent = '🔌 APAGANDO SISTEMAS... NAVE ASEGURADA.';
+                const powerDownOsc = ctx.createOscillator();
+                powerDownOsc.type = 'sawtooth';
+                powerDownOsc.frequency.setValueAtTime(80, ctx.currentTime);
+                powerDownOsc.frequency.exponentialRampToValueAtTime(20, ctx.currentTime + 5);
+                const powerDownGain = ctx.createGain();
+                powerDownGain.gain.setValueAtTime(0.3, ctx.currentTime);
+                powerDownGain.gain.linearRampToValueAtTime(0, ctx.currentTime + 5);
+                powerDownOsc.connect(powerDownGain);
+                powerDownGain.connect(ctx.destination);
+                powerDownOsc.start();
+                powerDownOsc.stop(ctx.currentTime + 5);
+            }, 80 * 1000);
+        }
+
+
+        // --- AI CHAT & SPEECH RECOGNITION FUNCTIONS ---
+        const aiChatContainer = document.getElementById('ai-chat-container');
+        const aiChatLog = document.getElementById('ai-chat-log');
+        const aiInput = document.getElementById('ai-input');
+        const aiSendBtn = document.getElementById('ai-send-btn');
+        const aiCloseBtn = document.getElementById('ai-close-btn');
+        const aiMicBtn = document.getElementById('ai-mic-btn');
+        let chatHistory = [];
+
+        function showAiChat() {
+            aiChatContainer.style.display = 'flex';
+            document.getElementById('status').textContent = '📡 CONECTANDO CON IA...';
+        }
+
+        function hideAiChat() {
+            aiChatContainer.style.display = 'none';
+            if (isRecognizing) recognition.stop();
+            document.getElementById('status').textContent = 'DISCONNECTED FROM AI.';
+        }
+
+        async function sendMessageToAI() {
+            const userPrompt = aiInput.value.trim();
+            if (!userPrompt) return;
+            addMessageToLog('Comandante', userPrompt, 'user-msg');
+            aiInput.value = '';
+            aiSendBtn.disabled = true;
+            addMessageToLog('IA', 'PENSANDO...', 'ai-msg', true);
+            const lowerCasePrompt = userPrompt.toLowerCase();
+            const selfIntroKeywords = ['quién eres', 'quien eres', 'presentate', 'eres tu'];
+            const plotCenterKeywords = ['plot center', 'viaje', 'qué es esto', 'que es esto', 'misión', 'proposito'];
+
+            if (selfIntroKeywords.some(keyword => lowerCasePrompt.includes(keyword))) {
+                const introResponse = "Soy la IA de PLOT , la inteligencia artificial a bordo de la nave Plot Center. Mi propósito es asistir a la tripulación y dar la bienvenida a los nuevos exploradores que se unen a nuestro viaje. Estoy aquí para ayudarte a navegar y responder tus preguntas.";
+                setTimeout(() => {
+                    updateLastMessage('IA', introResponse, 'ai-msg');
+                    speak(introResponse);
+                    aiSendBtn.disabled = false;
+                    aiInput.focus();
+                }, 1500);
+                return;
+            }
+
+            if (plotCenterKeywords.some(keyword => lowerCasePrompt.includes(keyword))) {
+                const thematicResponse = "Plot Center no es un destino, comandante. Es el viaje mismo. Es una odisea a través de la creatividad digital, una exploración de las señales que nos conectan en el vasto universo de las ideas. Somos una comunidad de exploradores, navegando juntos en esta nave, donde cada voz y cada creación es una estrella en nuestra constela. Nuestra misión es simple: crear, conectar y explorar lo desconocido. Bienvenido a bordo.";
+                setTimeout(() => {
+                    updateLastMessage('IA', thematicResponse, 'ai-msg');
+                    speak(thematicResponse);
+                    aiSendBtn.disabled = false;
+                    aiInput.focus();
+                }, 1500);
+                return;
+            }
+
+            chatHistory.push({ role: "user", parts: [{ text: userPrompt }] });
+            try {
+                const apiKey = "AIzaSyCSqe3HaU2Skzf2ejYkeVGR42neR0ZJskI"; 
+                // Using Gemini 2.5 Flash model
+               const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`;
+                
+                const payload = {
+                    contents: chatHistory,
+                    systemInstruction: {
+                        parts: [{
+                            text: "Eres la inteligencia artificial de la nave OMEGA de Plot Center. Tu nombre es PLOT AI. Eres eficiente, servicial y ligeramente misteriosa. Tu objetivo es asistir a la tripulación. Respuestas breves, directas y en estilo 'Sci-Fi'. No uses Markdown."
+                        }]
+                    }
+                };
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!response.ok) throw new Error(`API Error: ${response.status}`);
+                const result = await response.json();
+                const aiText = result.candidates[0].content.parts[0].text;
+                chatHistory.push({ role: "model", parts: [{ text: aiText }] });
+                updateLastMessage('IA', aiText, 'ai-msg');
+                speak(aiText);
+            } catch (error) {
+                console.error("Error communicating with AI:", error);
+                updateLastMessage('IA', '⚠️ ERROR DE COMUNICACIÓN. ENLACE CAÍDO.', 'ai-msg');
+            } finally {
+                aiSendBtn.disabled = false;
+                aiInput.focus();
+            }
+        }
+
+        function addMessageToLog(sender, message, className, isThinking = false) {
+            const p = document.createElement('p');
+            p.className = className;
+            p.innerHTML = `<strong>${sender}:</strong> ${message}`;
+            if (isThinking) p.id = 'thinking-msg';
+            aiChatLog.appendChild(p);
+            aiChatLog.scrollTop = aiChatLog.scrollHeight;
+        }
+
+        function updateLastMessage(sender, message, className) {
+            const thinkingMsg = document.getElementById('thinking-msg');
+            if (thinkingMsg) {
+                thinkingMsg.innerHTML = `<strong>${sender}:</strong> ${message}`;
+                thinkingMsg.id = '';
+            }
+        }
+
+        function setupSpeechRecognition() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                aiMicBtn.style.display = 'none';
+                return;
+            }
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.lang = 'es-AR';
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+            recognition.onresult = (event) => {
+                aiInput.value = event.results[0][0].transcript;
+            };
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                document.getElementById('status').textContent = `ERROR DE VOZ: ${event.error}`;
+                isRecognizing = false;
+                aiMicBtn.classList.remove('active');
+            };
+            recognition.onend = () => {
+                isRecognizing = false;
+                aiMicBtn.classList.remove('active');
+                if (aiInput.value.trim().length > 0) {
+                    sendMessageToAI();
+                }
+            };
+        }
+
+        function toggleVoiceRecognition() {
+            if (!recognition) return;
+            if (isRecognizing) {
+                recognition.stop();
+            } else {
+                initAudio();
+                speechSynthesis.cancel();
+                recognition.start();
+                isRecognizing = true;
+                aiMicBtn.classList.add('active');
+                document.getElementById('status').textContent = '🎤 Escuchando...';
+            }
+        }
+
+        // --- LOG GENERATOR FUNCTIONS ---
+        const logContainer = document.getElementById('log-generator-container');
+        const logDisplay = document.getElementById('log-display-area');
+        const logTopicInput = document.getElementById('log-topic-input');
+        const logGenerateBtn = document.getElementById('log-generate-btn');
+        const logCloseBtn = document.getElementById('log-close-btn');
+        const logReadBtn = document.getElementById('log-read-btn');
+
+        function showLogGenerator() {
+            logContainer.style.display = 'flex';
+            document.getElementById('status').textContent = '📖 ABRIENDO BITÁCORA DEL COMANDANTE...';
+        }
+
+        function hideLogGenerator() {
+            logContainer.style.display = 'none';
+            speechSynthesis.cancel();
+        }
+
+        async function generateLogEntry() {
+            const topic = logTopicInput.value.trim();
+            if (!topic) {
+                logDisplay.innerHTML = '<p>⚠️ DATOS INSUFICIENTES. INTRODUZCA TEMA.</p>';
+                return;
+            }
+            logGenerateBtn.disabled = true;
+            logDisplay.innerHTML = '<p>⏳ ANALIZANDO DATOS Y REDACTANDO BITÁCORA...</p>';
+            logReadBtn.style.display = 'none';
+
+            const prompt = `Escribe una breve entrada de bitácora del capitán (Fecha Estelar 2026.5). Tema: "${topic}". Tono militar pero reflexivo. Máximo 100 palabras.`;
+
+            try {
+                const apiKey = "AIzaSyCSqe3HaU2Skzf2ejYkeVGR42neR0ZJskI";
+                // Using Gemini 2.5 Flash model
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`;
+                const payload = { contents: [{ parts: [{ text: prompt }] }] };
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!response.ok) throw new Error(`API Error: ${response.status}`);
+                const result = await response.json();
+                const logText = result.candidates[0].content.parts[0].text;
+                logDisplay.innerText = logText;
+                logReadBtn.style.display = 'block';
+            } catch (error) {
+                console.error("Error generating log:", error);
+                logDisplay.innerHTML = '<p>⚠️ ERROR AL GENERAR ARCHIVO.</p>';
+            } finally {
+                logGenerateBtn.disabled = false;
+            }
+        }
+
+        // --- AI VISUALIZER ---
+        function initAiCanvas() {
+            const canvas = document.getElementById('ai-canvas');
+            const ctx = canvas.getContext('2d');
+            let frame = 0;
+
+            function resizeCanvas() {
+                canvas.width = canvas.parentElement.clientWidth;
+                canvas.height = canvas.parentElement.clientHeight;
+            }
+            
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                const centerX = canvas.width / 2;
+                const centerY = canvas.height / 2;
+                ctx.strokeStyle = '#00ff00';
+                ctx.lineWidth = 2;
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#00ff00';
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, 50, 0, Math.PI * 2);
+                ctx.stroke();
+                const eyeRadius = 10 + Math.sin(frame * 0.05) * 2;
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, eyeRadius, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(0, 255, 0, ${0.5 + Math.sin(frame * 0.07) * 0.2})`;
+                ctx.fill();
+                ctx.beginPath();
+                if (isAiSpeaking) {
+                    for (let i = -40; i <= 40; i++) {
+                        const x = centerX + i;
+                        const y = centerY + 35 + Math.sin(i * 0.2 + frame * 0.2) * 10;
+                        if (i === -40) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                    }
+                } else {
+                    ctx.moveTo(centerX - 40, centerY + 35);
+                    ctx.lineTo(centerX + 40, centerY + 35);
+                }
+                ctx.stroke();
+                frame++;
+                requestAnimationFrame(draw);
+            }
+
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas();
+            draw();
+        }
+
+        // --- MATRIX RAIN EFFECT ---
+        function initMatrixCanvas() {
+            const canvas = document.getElementById('matrixCanvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            const katakana = 'アァカサタナハマヤャラワガザダバパイィキシチニヒミリヰギジヂビピウゥクスツヌフムユュルグズブヅプエェケセテネヘメレヱゲゼデベペオォコソトノホモヨョロヲゴゾドボポヴッン';
+            const latin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            const nums = '0123456789';
+            const alphabet = katakana + latin + nums;
+            const fontSize = 16;
+            const columns = canvas.width / fontSize;
+            const rainDrops = [];
+            for (let x = 0; x < columns; x++) { rainDrops[x] = 1; }
+            function drawMatrix() {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#0F0';
+                ctx.font = fontSize + 'px monospace';
+                for (let i = 0; i < rainDrops.length; i++) {
+                    const text = alphabet.charAt(Math.floor(Math.random() * alphabet.length));
+                    ctx.fillText(text, i * fontSize, rainDrops[i] * fontSize);
+                    if (rainDrops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                        rainDrops[i] = 0;
+                    }
+                    rainDrops[i]++;
+                }
+            }
+            setInterval(drawMatrix, 30);
+            window.addEventListener('resize', () => {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            });
+        }
+
+        // --- SCREENSAVER ---
+        function showScreensaver() {
+            const screensaver = document.getElementById('screensaver');
+            screensaver.style.display = 'flex';
+        }
+
+        function hideScreensaver() {
+            const screensaver = document.getElementById('screensaver');
+            screensaver.style.display = 'none';
+            resetInactivityTimer();
+        }
+
+        function resetInactivityTimer() {
+            clearTimeout(inactivityTimer);
+            inactivityTimer = setTimeout(showScreensaver, 60000); // 1 minute
+        }
+
+        // --- INITIALIZE APP ---
+        window.onload = () => {
+            initMatrixCanvas();
+            renderSoundboard();
+            initAiCanvas();
+            
+            aiSendBtn.addEventListener('click', sendMessageToAI);
+            aiInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessageToAI(); });
+            aiCloseBtn.addEventListener('click', hideAiChat);
+            aiMicBtn.addEventListener('click', toggleVoiceRecognition);
+
+            logGenerateBtn.addEventListener('click', generateLogEntry);
+            logCloseBtn.addEventListener('click', hideLogGenerator);
+            logReadBtn.addEventListener('click', () => {
+                const logText = logDisplay.innerText;
+                if (logText) speak(logText);
+            });
+
+            setupSpeechRecognition();
+            if (speechSynthesis.onvoiceschanged !== undefined) {
+                speechSynthesis.onvoiceschanged = () => {};
+            }
+            // Ensure voices are loaded
+            setTimeout(() => {
+                if (speechSynthesis.getVoices().length === 0) {
+                    speechSynthesis.getVoices();
+                }
+            }, 200);
+
+            // Init Screensaver
+            window.addEventListener('mousemove', resetInactivityTimer);
+            window.addEventListener('mousedown', resetInactivityTimer);
+            window.addEventListener('keypress', resetInactivityTimer);
+            window.addEventListener('touchstart', resetInactivityTimer);
+            document.getElementById('screensaver').addEventListener('click', hideScreensaver);
+            resetInactivityTimer();
+        };
+    </script>
+</body>
+</html>
+
