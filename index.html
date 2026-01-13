@@ -1072,9 +1072,10 @@
             const prompt = `Escribe una breve entrada de bitácora del capitán (Fecha Estelar 2026.5). Tema: "${topic}". Tono militar pero reflexivo. Máximo 100 palabras.`;
 
             try {
-                // Using Gemini 2.5 Flash model
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`;
-                const payload = { contents: [{ parts: [{ text: prompt }] }] };
+                // Usamos nuestro proxy backend en Vercel
+                const apiUrl = '/api/gemini';
+                // Enviamos el prompt como parte del historial de chat para simplificar el endpoint
+                const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
                 const response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
