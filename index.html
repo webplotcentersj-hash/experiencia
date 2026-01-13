@@ -1,20 +1,21 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Plot Center - Consola de Nave</title>
 
     <!-- PWA Meta Tags -->
-    <meta name="theme-color" content="#00ff00"/>
+    <meta name="theme-color" content="#00ff00" />
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Plot Center">
     <meta name="description" content="Sistema Matrix - Consola de Sonidos de Nave Espacial con IA.">
-    
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@300;500;700&display=swap');
-        
+
         :root {
             --primary: #00ff41;
             --primary-dim: rgba(0, 255, 65, 0.1);
@@ -29,8 +30,12 @@
             --glass: 10px;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
             font-family: 'Rajdhani', sans-serif;
             background: var(--bg-dark);
@@ -42,24 +47,31 @@
             padding: 2vmin;
             overflow: hidden;
         }
-        
+
         /* Background Effects */
         #matrixCanvas {
             position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; z-index: 1;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
             opacity: 0.6;
         }
 
         .scanlines {
             position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             background: linear-gradient(to bottom, var(--scanline-color) 50%, transparent 50%);
             background-size: 100% 4px;
             pointer-events: none;
             z-index: 999;
         }
-        
+
         .container {
             background: var(--panel-bg);
             border: 1px solid var(--primary);
@@ -80,10 +92,19 @@
         }
 
         /* Scrollbar aesthetics */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: rgba(0,255,0,0.05); }
-        ::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 4px; }
-        
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 255, 0, 0.05);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 4px;
+        }
+
         .title {
             font-family: 'Orbitron', sans-serif;
             font-size: clamp(2rem, 5vw, 4rem);
@@ -93,7 +114,7 @@
             letter-spacing: 2px;
             text-transform: uppercase;
         }
-        
+
         .subtitle {
             font-size: clamp(1rem, 2vw, 1.5rem);
             margin-bottom: 2rem;
@@ -105,7 +126,7 @@
             padding-bottom: 1rem;
             display: inline-block;
         }
-        
+
         .soundboard-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
@@ -113,14 +134,18 @@
             margin: 1rem 0;
             flex-grow: 1;
         }
-        
+
         /* Mobile/Tablet Adjustments */
         @media (max-width: 768px) {
             .soundboard-grid {
-                grid-template-columns: repeat(2, 1fr); /* 2 columns on phones/small tablets */
+                grid-template-columns: repeat(2, 1fr);
+                /* 2 columns on phones/small tablets */
                 gap: 1rem;
             }
-            .container { padding: 1.5rem; }
+
+            .container {
+                padding: 1.5rem;
+            }
         }
 
         button.sound-btn {
@@ -142,23 +167,25 @@
             text-transform: uppercase;
             position: relative;
             overflow: hidden;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
         }
 
         /* Glitch/Hover Effect */
         button.sound-btn::before {
             content: '';
             position: absolute;
-            top: 0; left: -100%;
-            width: 100%; height: 100%;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
             background: linear-gradient(90deg, transparent, rgba(0, 255, 65, 0.2), transparent);
             transition: 0.5s;
         }
-        
+
         button.sound-btn:hover::before {
             left: 100%;
         }
-        
+
         button.sound-btn:hover {
             background: var(--primary-dim);
             box-shadow: 0 0 20px var(--primary-glow);
@@ -175,28 +202,49 @@
             color: #000;
             box-shadow: 0 0 25px var(--primary);
         }
-        
-        button.sound-btn.danger { border-color: var(--danger); color: var(--danger); }
-        button.sound-btn.danger:hover { background: var(--danger-dim); box-shadow: 0 0 20px var(--danger); color: #fff; text-shadow: 0 0 10px var(--danger); }
-        
-        button.sound-btn.secondary { border-color: var(--secondary); color: var(--secondary); }
-        button.sound-btn.secondary:hover { background: var(--secondary-dim); box-shadow: 0 0 20px var(--secondary); color: #fff; text-shadow: 0 0 10px var(--secondary); }
-        
+
+        button.sound-btn.danger {
+            border-color: var(--danger);
+            color: var(--danger);
+        }
+
+        button.sound-btn.danger:hover {
+            background: var(--danger-dim);
+            box-shadow: 0 0 20px var(--danger);
+            color: #fff;
+            text-shadow: 0 0 10px var(--danger);
+        }
+
+        button.sound-btn.secondary {
+            border-color: var(--secondary);
+            color: var(--secondary);
+        }
+
+        button.sound-btn.secondary:hover {
+            background: var(--secondary-dim);
+            box-shadow: 0 0 20px var(--secondary);
+            color: #fff;
+            text-shadow: 0 0 10px var(--secondary);
+        }
+
         .status {
-            margin-top: 2rem; 
-            color: var(--primary); 
+            margin-top: 2rem;
+            color: var(--primary);
             font-size: 1.1rem;
-            font-family: 'Orbitron', monospace; 
-            padding: 1rem; 
+            font-family: 'Orbitron', monospace;
+            padding: 1rem;
             border-top: 1px solid var(--primary-dim);
             border-bottom: 1px solid var(--primary-dim);
             background: linear-gradient(90deg, transparent, rgba(0, 255, 65, 0.05), transparent);
         }
-        
+
         /* Modal Styles */
         .modal-container {
             position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             background: rgba(0, 0, 0, 0.85);
             backdrop-filter: blur(5px);
             z-index: 100;
@@ -205,9 +253,10 @@
             align-items: center;
             padding: 1rem;
         }
-        
+
         .modal-window {
-            width: 100%; max-width: 800px;
+            width: 100%;
+            max-width: 800px;
             height: 85vh;
             background: rgba(5, 10, 5, 0.95);
             border: 1px solid var(--primary);
@@ -223,7 +272,10 @@
         .modal-window::after {
             content: '';
             position: absolute;
-            top: 0; left: 0; right: 0; height: 4px;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
             background: linear-gradient(90deg, transparent, var(--primary), transparent);
         }
 
@@ -232,55 +284,108 @@
             margin-bottom: 1rem;
             border: 1px solid var(--primary-dim);
             border-radius: 8px;
-            background: rgba(0,0,0,0.5);
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+            background: rgba(0, 0, 0, 0.5);
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
         }
-        
-        #ai-canvas { width: 100%; height: 100%; }
-        
+
+        #ai-canvas {
+            width: 100%;
+            height: 100%;
+        }
+
         .ai-chat-log {
-            flex-grow: 1; overflow-y: auto; 
+            flex-grow: 1;
+            overflow-y: auto;
             border: 1px solid var(--primary-dim);
             background: rgba(0, 20, 0, 0.3);
-            border-radius: 8px; padding: 1.5rem; margin-bottom: 1rem;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
             font-family: 'Rajdhani', monospace;
             font-size: 1.1rem;
         }
-        
-        .ai-chat-log p { margin-bottom: 1rem; line-height: 1.6; }
-        .ai-chat-log .user-msg { color: var(--secondary); text-align: right; border-right: 2px solid var(--secondary); padding-right: 10px; }
-        .ai-chat-log .ai-msg { color: var(--primary); text-align: left; border-left: 2px solid var(--primary); padding-left: 10px; }
-        
-        .ai-input-area { display: flex; gap: 10px; height: 50px; }
-        
-        #ai-input, #log-topic-input {
-            flex-grow: 1; background: rgba(0,0,0,0.5); 
+
+        .ai-chat-log p {
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+
+        .ai-chat-log .user-msg {
+            color: var(--secondary);
+            text-align: right;
+            border-right: 2px solid var(--secondary);
+            padding-right: 10px;
+        }
+
+        .ai-chat-log .ai-msg {
+            color: var(--primary);
+            text-align: left;
+            border-left: 2px solid var(--primary);
+            padding-left: 10px;
+        }
+
+        .ai-input-area {
+            display: flex;
+            gap: 10px;
+            height: 50px;
+        }
+
+        #ai-input,
+        #log-topic-input {
+            flex-grow: 1;
+            background: rgba(0, 0, 0, 0.5);
             border: 1px solid var(--primary);
-            color: #fff; padding: 0 1rem; border-radius: 5px;
+            color: #fff;
+            padding: 0 1rem;
+            border-radius: 5px;
             font-family: 'Rajdhani', sans-serif;
             font-size: 1.1rem;
         }
-        
-        #ai-input:focus, #log-topic-input:focus { outline: none; box-shadow: 0 0 10px var(--primary-dim); }
+
+        #ai-input:focus,
+        #log-topic-input:focus {
+            outline: none;
+            box-shadow: 0 0 10px var(--primary-dim);
+        }
 
         .action-btn {
-            background: rgba(0, 255, 65, 0.1); 
-            border: 1px solid var(--primary); 
+            background: rgba(0, 255, 65, 0.1);
+            border: 1px solid var(--primary);
             color: var(--primary);
-            padding: 0 1.5rem; border-radius: 5px; cursor: pointer; 
+            padding: 0 1.5rem;
+            border-radius: 5px;
+            cursor: pointer;
             font-family: 'Orbitron', monospace;
             font-weight: bold;
             transition: all 0.3s;
         }
-        .action-btn:hover { background: var(--primary); color: #000; }
-        .action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        
-        #ai-mic-btn { border-color: var(--secondary); color: var(--secondary); width: 50px; }
-        #ai-mic-btn.active { background: var(--danger); color: #fff; border-color: var(--danger); animation: pulse 1s infinite; }
-        
-        .modal-close-btn { 
-            margin-top: 1rem; 
-            padding: 1rem; 
+
+        .action-btn:hover {
+            background: var(--primary);
+            color: #000;
+        }
+
+        .action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        #ai-mic-btn {
+            border-color: var(--secondary);
+            color: var(--secondary);
+            width: 50px;
+        }
+
+        #ai-mic-btn.active {
+            background: var(--danger);
+            color: #fff;
+            border-color: var(--danger);
+            animation: pulse 1s infinite;
+        }
+
+        .modal-close-btn {
+            margin-top: 1rem;
+            padding: 1rem;
             width: 100%;
             background: transparent;
             border: 1px solid var(--danger);
@@ -289,37 +394,62 @@
             cursor: pointer;
             transition: all 0.3s;
         }
-        .modal-close-btn:hover { background: var(--danger); color: #fff; }
+
+        .modal-close-btn:hover {
+            background: var(--danger);
+            color: #fff;
+        }
 
         @keyframes pulse {
-            0% { box-shadow: 0 0 5px var(--danger); }
-            50% { box-shadow: 0 0 20px var(--danger); }
-            100% { box-shadow: 0 0 5px var(--danger); }
+            0% {
+                box-shadow: 0 0 5px var(--danger);
+            }
+
+            50% {
+                box-shadow: 0 0 20px var(--danger);
+            }
+
+            100% {
+                box-shadow: 0 0 5px var(--danger);
+            }
         }
-        
+
         /* Log Generator Styles */
         .log-display-area {
-            flex-grow: 1; overflow-y: auto; 
+            flex-grow: 1;
+            overflow-y: auto;
             border: 1px solid var(--primary-dim);
-            background: rgba(0,0,0,0.4);
-            border-radius: 8px; padding: 1.5rem; margin: 10px 0;
-            font-family: 'Rajdhani', monospace; line-height: 1.6;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 10px 0;
+            font-family: 'Rajdhani', monospace;
+            line-height: 1.6;
             color: #eee;
         }
 
         /* Screensaver */
         #screensaver {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #000; z-index: 2000;
-            display: none; justify-content: center; align-items: center;
-            flex-direction: column; cursor: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 2000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            cursor: none;
         }
     </style>
 </head>
+
 <body>
     <div class="scanlines"></div>
     <canvas id="matrixCanvas"></canvas>
-    
+
     <div class="container">
         <h1 class="title">PLOT CENTER</h1>
         <p class="subtitle">CONSOLA DE NAVE OMEGA</p>
@@ -349,7 +479,8 @@
     <!-- Commander's Log Generator Window -->
     <div id="log-generator-container" class="modal-container">
         <div class="modal-window">
-            <h3 style="font-family: 'Orbitron'; color: var(--secondary); margin-bottom: 15px;">✨ GENERADOR DE BITÁCORA</h3>
+            <h3 style="font-family: 'Orbitron'; color: var(--secondary); margin-bottom: 15px;">✨ GENERADOR DE BITÁCORA
+            </h3>
             <p class="log-instructions" style="color: #aaa;">Introduce el evento o tema del día:</p>
             <input type="text" id="log-topic-input" placeholder="Ej: Anomalía en el sector 7...">
             <div style="display:flex; justify-content:flex-end; margin-top:10px;">
@@ -358,7 +489,8 @@
             <div class="log-display-area" id="log-display-area">
                 <p>Esperando datos...</p>
             </div>
-            <button id="log-read-btn" class="action-btn" style="display: none; margin-bottom: 10px;">LEER EN VOZ ALTA</button>
+            <button id="log-read-btn" class="action-btn" style="display: none; margin-bottom: 10px;">LEER EN VOZ
+                ALTA</button>
             <button id="log-close-btn" class="modal-close-btn">CERRAR</button>
         </div>
     </div>
@@ -380,7 +512,12 @@
         let isRecognizing = false;
         let isAiSpeaking = false;
         let inactivityTimer;
-        
+
+        // --- CONFIGURACIÓN ---
+        // Pega aquí tu API Key de Gemini
+        const GEMINI_API_KEY = "AIzaSyCSqe3HaU2Skzf2ejYkeVGR42neR0ZJskI";
+        // ---------------------
+
         const soundboardButtons = [
             { label: 'CONTACTAR IA', action: showAiChat, style: 'primary' },
             { label: '✨ GENERAR BITÁCORA', action: showLogGenerator, style: 'primary' },
@@ -410,7 +547,7 @@
             speechSynthesis.cancel();
             if (isRecognizing) recognition.stop();
             stopAmbience();
-            if(audioContext) {
+            if (audioContext) {
                 audioContext.close().then(() => initAudio());
             }
             document.getElementById('status').textContent = '⏹️ SILENCIO TOTAL. Sistemas detenidos.';
@@ -431,12 +568,12 @@
                 grid.appendChild(button);
             });
         }
-        
+
         function openExternalLink(url) {
             window.open(url, '_blank');
             document.getElementById('status').textContent = `🔗 ABRIENDO ENLACE EXTERNO...`;
         }
-        
+
         function toggleFullScreen() {
             if (!document.fullscreenElement) {
                 document.documentElement.requestFullscreen().catch(err => {
@@ -455,7 +592,7 @@
             speechSynthesis.cancel(); // Stop any previous speech
             const utterance = new SpeechSynthesisUtterance(text);
             const voices = speechSynthesis.getVoices();
-            
+
             let selectedVoice = voices.find(v => v.lang.startsWith('es-LA') || v.lang.startsWith('es-ES')) || voices.find(v => v.lang.startsWith('es')) || voices[0];
 
             utterance.voice = selectedVoice;
@@ -506,11 +643,11 @@
                 backgroundAudio.start();
             } catch (e) { console.error("Error creating ambience:", e); }
         }
-        
+
         function stopAmbience() {
-            if (backgroundAudio) { try { backgroundAudio.stop(); } catch (e) {} backgroundAudio = null; }
+            if (backgroundAudio) { try { backgroundAudio.stop(); } catch (e) { } backgroundAudio = null; }
         }
-        
+
         function createTakeoffEffect() {
             document.getElementById('status').textContent = '🚀 INICIANDO SECUENCIA DE DESPEGUE...';
             try {
@@ -639,13 +776,13 @@
                 document.getElementById('status').textContent = '✅ ESCLUSA SELLADA.';
             }, (duration - 0.2) * 1000);
         }
-        
+
         function createLandingSequence() {
             document.getElementById('status').textContent = '🛬 INICIANDO SECUENCIA DE ATERRIZAJE...';
             const ctx = initAudio();
             const totalDuration = 87; // 1 minute 27 seconds
             const now = ctx.currentTime;
-            
+
             // --- Phase 1: Re-entry (0-20s) ---
             const reEntryNoise = ctx.createBufferSource();
             const bufferSize = ctx.sampleRate * 20;
@@ -812,10 +949,9 @@
 
             chatHistory.push({ role: "user", parts: [{ text: userPrompt }] });
             try {
-                const apiKey = "AIzaSyCSqe3HaU2Skzf2ejYkeVGR42neR0ZJskI"; 
                 // Using Gemini 2.5 Flash model
-               const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`;
-                
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`;
+
                 const payload = {
                     contents: chatHistory,
                     systemInstruction: {
@@ -936,9 +1072,8 @@
             const prompt = `Escribe una breve entrada de bitácora del capitán (Fecha Estelar 2026.5). Tema: "${topic}". Tono militar pero reflexivo. Máximo 100 palabras.`;
 
             try {
-                const apiKey = "AIzaSyCSqe3HaU2Skzf2ejYkeVGR42neR0ZJskI";
                 // Using Gemini 2.5 Flash model
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`;
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`;
                 const payload = { contents: [{ parts: [{ text: prompt }] }] };
                 const response = await fetch(apiUrl, {
                     method: 'POST',
@@ -968,7 +1103,7 @@
                 canvas.width = canvas.parentElement.clientWidth;
                 canvas.height = canvas.parentElement.clientHeight;
             }
-            
+
             function draw() {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 const centerX = canvas.width / 2;
@@ -1064,7 +1199,7 @@
             initMatrixCanvas();
             renderSoundboard();
             initAiCanvas();
-            
+
             aiSendBtn.addEventListener('click', sendMessageToAI);
             aiInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessageToAI(); });
             aiCloseBtn.addEventListener('click', hideAiChat);
@@ -1079,7 +1214,7 @@
 
             setupSpeechRecognition();
             if (speechSynthesis.onvoiceschanged !== undefined) {
-                speechSynthesis.onvoiceschanged = () => {};
+                speechSynthesis.onvoiceschanged = () => { };
             }
             // Ensure voices are loaded
             setTimeout(() => {
@@ -1098,5 +1233,5 @@
         };
     </script>
 </body>
-</html>
 
+</html>
