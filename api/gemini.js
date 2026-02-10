@@ -1,3 +1,6 @@
+import { GoogleGenAI } from "@google/genai";
+
+const SYSTEM_INSTRUCTION = "Eres la inteligencia artificial de la nave OMEGA de Plot Center. Tu nombre es PLOT AI. Eres eficiente, servicial y ligeramente misteriosa. Tu objetivo es asistir a la tripulación. Respuestas breves, directas y en estilo 'Sci-Fi'. No uses Markdown.";
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
@@ -12,29 +15,26 @@ export default async function handler(req, res) {
     }
 
     try {
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`;
-        
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: contents,
-                systemInstruction: {
-                    parts: [{
-                        text: "Eres la inteligencia artificial de la nave OMEGA de Plot Center. Tu nombre es PLOT AI. Eres eficiente, servicial y ligeramente misteriosa. Tu objetivo es asistir a la tripulación. Respuestas breves, directas y en estilo 'Sci-Fi'. No uses Markdown."
-                    }]
-                }
-            })
+        const ai = new GoogleGenAI({ apiKey });
+
+        const response = await ai.models.generateContent({
+            model: "gemini-2.0-flash-exp",
+            contents,
+            systemInstruction: SYSTEM_INSTRUCTION,
         });
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Gemini API Error: ${errorText}`);
-        }
+        const text = response.text ?? "";
 
-        const data = await response.json();
-        res.status(200).json(data);
-
+        // Misma estructura que la API REST para no romper el frontend
+        res.status(200).json({
+            candidates: [
+                {
+                    content: {
+                        parts: [{ text }],
+                    },
+                },
+            ],
+        });
     } catch (error) {
         console.error("Server API Error:", error);
         res.status(500).json({ error: error.message });
