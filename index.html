@@ -36,6 +36,11 @@
             box-sizing: border-box;
         }
 
+        html {
+            -webkit-text-size-adjust: 100%;
+            overflow-x: hidden;
+        }
+
         body {
             font-family: 'Rajdhani', sans-serif;
             background: var(--bg-dark);
@@ -309,6 +314,60 @@
             .radar-wrap { max-width: 80px; justify-self: center; }
         }
 
+        /* Responsive: bien usable en móvil y tablet */
+        @media (max-width: 768px) {
+            .bridge { padding: 0.35rem; min-height: 100vh; }
+            .hud-bar { padding: 0.4rem 0.6rem; font-size: 0.6rem; flex-wrap: wrap; gap: 0.25rem; }
+            .hud-left, .hud-right { justify-content: center; }
+            .hud-divider { display: none; }
+            .bridge-main { gap: 0.5rem; min-height: 200px; }
+            .viewport-bezel { min-height: 160px; }
+            #starfieldCanvas { min-height: 160px; }
+            .viewport-label { font-size: 0.5rem; }
+            .panel { padding: 0.5rem; width: 100%; }
+            .gauge-label, .readout-line { font-size: 0.55rem; }
+            .control-deck { padding: 1rem; }
+            .title { font-size: clamp(1.5rem, 6vw, 2.5rem); }
+            .subtitle { font-size: clamp(0.85rem, 3vw, 1.1rem); letter-spacing: 2px; }
+            .soundboard-grid { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+            button.sound-btn { min-height: 72px; padding: 0.75rem; font-size: 0.9rem; }
+            .status { font-size: 0.95rem; padding: 0.75rem; }
+        }
+
+        @media (max-width: 480px) {
+            .bridge { padding: 0.25rem; }
+            .hud-bar { flex-direction: column; text-align: center; }
+            .hud-center { order: -1; }
+            .hud-badge { font-size: 0.85rem; }
+            .bridge-main { flex-direction: column; }
+            .panel { grid-template-columns: 1fr; }
+            .panel-right { display: flex; flex-direction: column; align-items: center; }
+            .radar-wrap { margin: 0 auto; }
+            .viewport-bezel { min-height: 140px; }
+            #starfieldCanvas { min-height: 140px; }
+            .soundboard-grid { gap: 0.5rem; }
+            button.sound-btn { min-height: 60px; font-size: 0.8rem; padding: 0.5rem; }
+        }
+
+        /* Modales responsive y touch-friendly */
+        @media (max-width: 768px) {
+            .modal-container { padding: 0.5rem; align-items: flex-start; overflow-y: auto; }
+            .modal-window { max-height: 90vh; min-height: 280px; padding: 1rem; overflow: hidden; display: flex; flex-direction: column; }
+            .ai-visualizer { height: 100px; min-height: 100px; }
+            .ai-chat-log { min-height: 120px; max-height: 40vh; padding: 1rem; font-size: 1rem; }
+            .ai-input-area { flex-wrap: wrap; height: auto; gap: 0.5rem; }
+            #ai-input { min-height: 44px; font-size: 16px; }
+            .action-btn { min-height: 44px; min-width: 44px; padding: 0.5rem 1rem; }
+            .modal-close-btn { min-height: 48px; padding: 0.75rem; }
+            .log-display-area { min-height: 100px; max-height: 30vh; padding: 1rem; font-size: 0.95rem; }
+            #log-topic-input { min-height: 44px; font-size: 16px; }
+        }
+
+        @media (max-width: 480px) {
+            .modal-window { width: 100%; max-width: 100%; border-radius: 12px; }
+            .ai-chat-log { max-height: 35vh; }
+        }
+
         .scanlines {
             position: fixed;
             top: 0;
@@ -330,6 +389,8 @@
             max-width: 1000px;
             max-height: 95vh;
             overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
             text-align: center;
             box-shadow: 0 0 30px rgba(0, 255, 65, 0.15), inset 0 0 20px rgba(0, 255, 65, 0.05);
             position: relative;
@@ -1289,21 +1350,29 @@
 
             chatHistory.push({ role: "user", parts: [{ text: userPrompt }] });
             try {
-                // Usar proxy backend para no exponer la API key (evita 403)
-                const response = await fetch('/api/gemini', {
+                const apiUrl = (typeof window !== 'undefined' && window.location?.origin)
+                    ? window.location.origin + '/api/gemini'
+                    : '/api/gemini';
+                const response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ contents: chatHistory })
                 });
-                if (!response.ok) throw new Error(`API Error: ${response.status}`);
-                const result = await response.json();
-                const aiText = result.candidates[0].content.parts[0].text;
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    const msg = result.error || `Error ${response.status}`;
+                    throw new Error(msg);
+                }
+                const aiText = result.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+                if (!aiText) throw new Error('Respuesta vacía del servidor');
                 chatHistory.push({ role: "model", parts: [{ text: aiText }] });
                 updateLastMessage('IA', aiText, 'ai-msg');
                 speak(aiText);
             } catch (error) {
                 console.error("Error communicating with AI:", error);
-                updateLastMessage('IA', '⚠️ ERROR DE COMUNICACIÓN. ENLACE CAÍDO.', 'ai-msg');
+                const msg = error?.message || 'Error desconocido';
+                const userMsg = msg.includes('API Key') ? '⚠️ Servidor sin API Key. Configura GEMINI_API_KEY en Vercel.' : (msg.includes('Failed to fetch') || msg.includes('NetworkError') ? '⚠️ No se pudo conectar. ¿Estás en la URL desplegada (Vercel)?' : `⚠️ ${msg}`);
+                updateLastMessage('IA', userMsg, 'ai-msg');
             } finally {
                 aiSendBtn.disabled = false;
                 aiInput.focus();
@@ -1401,23 +1470,23 @@
             const prompt = `Escribe una breve entrada de bitácora del capitán (Fecha Estelar 2026.5). Tema: "${topic}". Tono militar pero reflexivo. Máximo 100 palabras.`;
 
             try {
-                // Usamos nuestro proxy backend en Vercel
-                const apiUrl = '/api/gemini';
-                // Enviamos el prompt como parte del historial de chat para simplificar el endpoint
+                const apiUrl = (typeof window !== 'undefined' && window.location?.origin)
+                    ? window.location.origin + '/api/gemini'
+                    : '/api/gemini';
                 const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
                 const response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-                if (!response.ok) throw new Error(`API Error: ${response.status}`);
-                const result = await response.json();
-                const logText = result.candidates[0].content.parts[0].text;
-                logDisplay.innerText = logText;
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(result.error || `Error ${response.status}`);
+                const logText = result.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+                logDisplay.innerText = logText || 'Sin respuesta.';
                 logReadBtn.style.display = 'block';
             } catch (error) {
                 console.error("Error generating log:", error);
-                logDisplay.innerHTML = '<p>⚠️ ERROR AL GENERAR ARCHIVO.</p>';
+                logDisplay.innerHTML = '<p>⚠️ ERROR AL GENERAR ARCHIVO. ' + (error?.message || '') + '</p>';
             } finally {
                 logGenerateBtn.disabled = false;
             }
