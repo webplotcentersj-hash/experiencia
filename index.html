@@ -41,11 +41,10 @@
             background: var(--bg-dark);
             color: var(--primary);
             min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 2vmin;
-            overflow: hidden;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            overflow-y: auto;
         }
 
         /* Background Effects */
@@ -57,7 +56,257 @@
             height: 100%;
             pointer-events: none;
             z-index: 1;
-            opacity: 0.6;
+            opacity: 0.25;
+        }
+
+        /* ========== BRIDGE (CABINA REALISTA) ========== */
+        .bridge {
+            position: relative;
+            z-index: 10;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 0.5rem;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .hud-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.5rem 1rem;
+            background: linear-gradient(180deg, rgba(0,20,0,0.95) 0%, rgba(0,10,0,0.9) 100%);
+            border: 1px solid var(--primary);
+            border-radius: 8px;
+            margin-bottom: 0.75rem;
+            box-shadow: 0 0 20px rgba(0,255,65,0.1), inset 0 1px 0 rgba(0,255,65,0.15);
+            font-family: 'Orbitron', monospace;
+            font-size: clamp(0.65rem, 1.5vw, 0.85rem);
+        }
+
+        .hud-left, .hud-right { display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; }
+        .hud-center { display: flex; flex-direction: column; align-items: center; }
+        .hud-label { color: rgba(0,255,65,0.7); text-transform: uppercase; letter-spacing: 1px; }
+        .hud-value { color: var(--primary); text-shadow: 0 0 8px var(--primary-glow); }
+        .hud-value.mono { font-variant-numeric: tabular-nums; }
+        .hud-divider { color: rgba(0,255,65,0.3); margin: 0 0.25rem; }
+        .hud-badge { font-weight: 700; font-size: clamp(0.75rem, 2vw, 1rem); letter-spacing: 2px; color: var(--primary); }
+        .hud-sublabel { color: var(--secondary); font-size: 0.65em; letter-spacing: 3px; }
+
+        .bridge-main {
+            display: flex;
+            gap: 0.75rem;
+            flex: 1 1 auto;
+            min-height: 280px;
+            margin-bottom: 0.75rem;
+        }
+
+        .panel {
+            width: clamp(140px, 18vw, 200px);
+            flex-shrink: 0;
+            background: linear-gradient(165deg, rgba(5,15,5,0.98) 0%, rgba(0,12,0,0.95) 100%);
+            border: 1px solid var(--primary);
+            border-radius: 10px;
+            padding: 0.75rem;
+            box-shadow: 0 0 25px rgba(0,255,65,0.08), inset 0 0 30px rgba(0,0,0,0.5);
+        }
+
+        .panel-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 0.7rem;
+            color: var(--secondary);
+            letter-spacing: 2px;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.35rem;
+            border-bottom: 1px solid rgba(0,210,255,0.3);
+        }
+
+        .gauge-block {
+            margin-bottom: 0.75rem;
+        }
+
+        .gauge-label {
+            font-size: 0.6rem;
+            color: rgba(0,255,65,0.8);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.25rem;
+        }
+
+        .gauge-bar {
+            height: 6px;
+            background: rgba(0,0,0,0.6);
+            border: 1px solid rgba(0,255,65,0.3);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .gauge-fill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            border-radius: 2px;
+            box-shadow: 0 0 10px var(--primary-glow);
+            transition: width 0.5s ease;
+        }
+
+        .gauge-value {
+            font-family: 'Orbitron', monospace;
+            font-size: 0.65rem;
+            color: var(--primary);
+            display: block;
+            margin-top: 0.2rem;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .readout-line {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 0.5rem;
+            padding: 0.25rem 0;
+            border-bottom: 1px solid rgba(0,255,65,0.1);
+            font-size: 0.65rem;
+        }
+
+        .readout-label { color: rgba(0,255,65,0.7); }
+        .readout-value { color: var(--primary); font-variant-numeric: tabular-nums; }
+        .readout-value.status-ok { color: #00ff88; text-shadow: 0 0 6px #00ff88; }
+
+        .viewport-frame {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            align-items: stretch;
+            justify-content: center;
+        }
+
+        .viewport-bezel {
+            width: 100%;
+            min-height: 220px;
+            background: #000;
+            border: 3px solid #1a2a1a;
+            border-radius: 8px;
+            box-shadow: inset 0 0 60px rgba(0,0,0,0.9), 0 0 30px rgba(0,255,65,0.12);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .viewport-bezel::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            border: 1px solid rgba(0,255,65,0.25);
+            border-radius: 6px;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        #starfieldCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            min-height: 220px;
+            position: absolute;
+            top: 0; left: 0;
+        }
+
+        .viewport-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.4) 100%);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .viewport-label {
+            position: absolute;
+            bottom: 0.35rem;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Orbitron', monospace;
+            font-size: 0.6rem;
+            color: rgba(0,255,65,0.5);
+            letter-spacing: 2px;
+            z-index: 2;
+        }
+
+        .radar-wrap {
+            width: 100%;
+            aspect-ratio: 1;
+            max-width: 120px;
+            margin: 0 auto 0.75rem;
+            background: rgba(0,0,0,0.7);
+            border: 1px solid rgba(0,255,65,0.3);
+            border-radius: 50%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .radar-sweep {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            background: conic-gradient(from 0deg, transparent 0deg, rgba(0,255,65,0.15) 90deg, transparent 90deg);
+            animation: radar-sweep 4s linear infinite;
+        }
+
+        .radar-dots {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            padding: 20%;
+        }
+
+        .radar-dot {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: var(--primary);
+            border-radius: 50%;
+            box-shadow: 0 0 6px var(--primary);
+            animation: radar-dot 8s linear infinite;
+            animation-delay: calc(var(--i) * -1.2s);
+        }
+
+        .radar-dot:nth-child(1) { top: 15%; left: 60%; }
+        .radar-dot:nth-child(2) { top: 45%; left: 75%; }
+        .radar-dot:nth-child(3) { top: 70%; left: 40%; }
+        .radar-dot:nth-child(4) { top: 50%; left: 20%; }
+        .radar-dot:nth-child(5) { top: 25%; left: 35%; }
+
+        .radar-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 6px;
+            height: 6px;
+            margin: -3px 0 0 -3px;
+            background: var(--primary);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--primary);
+            z-index: 2;
+        }
+
+        @keyframes radar-sweep {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes radar-dot {
+            0%, 100% { opacity: 0.6; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+
+        .control-deck {
+            margin-bottom: 0.5rem;
+        }
+
+        @media (max-width: 900px) {
+            .bridge-main { flex-direction: column; min-height: auto; }
+            .panel { width: 100%; max-width: none; display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+            .panel-left .panel-title, .panel-right .panel-title { grid-column: 1 / -1; }
+            .radar-wrap { max-width: 80px; justify-self: center; }
         }
 
         .scanlines {
@@ -139,13 +388,15 @@
         @media (max-width: 768px) {
             .soundboard-grid {
                 grid-template-columns: repeat(2, 1fr);
-                /* 2 columns on phones/small tablets */
                 gap: 1rem;
             }
 
             .container {
                 padding: 1.5rem;
             }
+
+            .hud-bar { flex-direction: column; gap: 0.5rem; text-align: center; }
+            .hud-center { order: -1; }
         }
 
         button.sound-btn {
@@ -450,11 +701,100 @@
     <div class="scanlines"></div>
     <canvas id="matrixCanvas"></canvas>
 
-    <div class="container">
-        <h1 class="title">PLOT CENTER</h1>
-        <p class="subtitle">CONSOLA DE NAVE OMEGA</p>
-        <div class="soundboard-grid" id="soundboard"></div>
-        <div class="status" id="status">🔋 SISTEMAS EN ESPERA</div>
+    <div class="bridge">
+        <!-- HUD superior -->
+        <header class="hud-bar">
+            <div class="hud-left">
+                <span class="hud-label">NAVE</span>
+                <span class="hud-value" id="hud-ship">PLOT</span>
+                <span class="hud-divider">|</span>
+                <span class="hud-label">FECHA ESTELAR</span>
+                <span class="hud-value mono" id="hud-stardate">2026.042</span>
+            </div>
+            <div class="hud-center">
+                <span class="hud-badge">PLOT CENTER</span>
+                <span class="hud-sublabel">CONSOLA DE PUENTE</span>
+            </div>
+            <div class="hud-right">
+                <span class="hud-label">HULL</span>
+                <span class="hud-value mono" id="hud-hull">100%</span>
+                <span class="hud-divider">|</span>
+                <span class="hud-label">O₂</span>
+                <span class="hud-value mono" id="hud-o2">100%</span>
+                <span class="hud-divider">|</span>
+                <span class="hud-label">PWR</span>
+                <span class="hud-value mono" id="hud-power">98%</span>
+            </div>
+        </header>
+
+        <!-- Zona central: ventana al espacio + paneles -->
+        <div class="bridge-main">
+            <aside class="panel panel-left">
+                <div class="panel-title">SISTEMAS</div>
+                <div class="gauge-block">
+                    <div class="gauge-label">INTEGRIDAD CASCO</div>
+                    <div class="gauge-bar"><div class="gauge-fill" id="gauge-hull"></div></div>
+                    <span class="gauge-value" id="gauge-hull-txt">100%</span>
+                </div>
+                <div class="gauge-block">
+                    <div class="gauge-label">SOPORTE VITAL</div>
+                    <div class="gauge-bar"><div class="gauge-fill" id="gauge-o2"></div></div>
+                    <span class="gauge-value" id="gauge-o2-txt">100%</span>
+                </div>
+                <div class="gauge-block">
+                    <div class="gauge-label">REACTOR</div>
+                    <div class="gauge-bar"><div class="gauge-fill" id="gauge-pwr"></div></div>
+                    <span class="gauge-value" id="gauge-pwr-txt">98%</span>
+                </div>
+                <div class="readout-line">
+                    <span class="readout-label">SECTOR</span>
+                    <span class="readout-value mono" id="readout-sector">7-GAMMA</span>
+                </div>
+                <div class="readout-line">
+                    <span class="readout-label">VELOCIDAD</span>
+                    <span class="readout-value mono" id="readout-vel">0.0 c</span>
+                </div>
+            </aside>
+
+            <div class="viewport-frame">
+                <div class="viewport-bezel">
+                    <canvas id="starfieldCanvas"></canvas>
+                    <div class="viewport-overlay"></div>
+                    <div class="viewport-label">VISTA PRINCIPAL — SENSORES ÓPTICOS</div>
+                </div>
+            </div>
+
+            <aside class="panel panel-right">
+                <div class="panel-title">NAVEGACIÓN</div>
+                <div class="radar-wrap">
+                    <div class="radar-sweep"></div>
+                    <div class="radar-dots">
+                        <span class="radar-dot" style="--i:0"></span>
+                        <span class="radar-dot" style="--i:1"></span>
+                        <span class="radar-dot" style="--i:2"></span>
+                        <span class="radar-dot" style="--i:3"></span>
+                        <span class="radar-dot" style="--i:4"></span>
+                    </div>
+                    <div class="radar-center"></div>
+                </div>
+                <div class="readout-line">
+                    <span class="readout-label">COM</span>
+                    <span class="readout-value status-ok" id="readout-com">ENLACE</span>
+                </div>
+                <div class="readout-line">
+                    <span class="readout-label">IA</span>
+                    <span class="readout-value status-ok" id="readout-ia">PLOT AI</span>
+                </div>
+            </aside>
+        </div>
+
+        <!-- Cubierta de control -->
+        <div class="container control-deck">
+            <h1 class="title">PLOT CENTER</h1>
+            <p class="subtitle">CONSOLA NAVE PLOT</p>
+            <div class="soundboard-grid" id="soundboard"></div>
+            <div class="status" id="status">🔋 SISTEMAS EN ESPERA</div>
+        </div>
     </div>
 
     <!-- AI Chat Window -->
@@ -515,7 +855,7 @@
 
         // --- CONFIGURACIÓN ---
         // Pega aquí tu API Key de Gemini
-        const GEMINI_API_KEY = "AIzaSyCSqe3HaU2Skzf2ejYkeVGR42neR0ZJskI";
+        // API key solo en servidor (Vercel: GEMINI_API_KEY)
         // ---------------------
 
         const soundboardButtons = [
@@ -949,22 +1289,11 @@
 
             chatHistory.push({ role: "user", parts: [{ text: userPrompt }] });
             try {
-                // Using Gemini 2.5 Flash model
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`;
-
-                const payload = {
-                    contents: chatHistory,
-                    systemInstruction: {
-                        parts: [{
-                            text: "Eres la inteligencia artificial de la nave OMEGA de Plot Center. Tu nombre es PLOT AI. Eres eficiente, servicial y ligeramente misteriosa. Tu objetivo es asistir a la tripulación. Respuestas breves, directas y en estilo 'Sci-Fi'. No uses Markdown."
-                        }]
-                    }
-                };
-
-                const response = await fetch(apiUrl, {
+                // Usar proxy backend para no exponer la API key (evita 403)
+                const response = await fetch('/api/gemini', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify({ contents: chatHistory })
                 });
                 if (!response.ok) throw new Error(`API Error: ${response.status}`);
                 const result = await response.json();
@@ -1143,6 +1472,96 @@
             draw();
         }
 
+        // --- STARFIELD (VENTANA AL ESPACIO) ---
+        function initStarfield() {
+            const canvas = document.getElementById('starfieldCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            let stars = [];
+            const count = 180;
+            let animationId;
+
+            function resize() {
+                const rect = canvas.parentElement.getBoundingClientRect();
+                const dpr = window.devicePixelRatio || 1;
+                canvas.width = rect.width * dpr;
+                canvas.height = rect.height * dpr;
+                canvas.style.width = rect.width + 'px';
+                canvas.style.height = rect.height + 'px';
+                ctx.scale(dpr, dpr);
+                stars = [];
+                for (let i = 0; i < count; i++) {
+                    stars.push({
+                        x: Math.random() * rect.width,
+                        y: Math.random() * rect.height,
+                        r: Math.random() * 1.2 + 0.3,
+                        twinkle: Math.random() * Math.PI * 2,
+                        speed: 0.02 + Math.random() * 0.03
+                    });
+                }
+            }
+
+            function draw() {
+                const w = canvas.width / (window.devicePixelRatio || 1);
+                const h = canvas.height / (window.devicePixelRatio || 1);
+                ctx.fillStyle = '#030508';
+                ctx.fillRect(0, 0, w, h);
+                const t = Date.now() / 1000;
+                stars.forEach(s => {
+                    s.twinkle += s.speed;
+                    const alpha = 0.3 + 0.7 * (0.5 + 0.5 * Math.sin(s.twinkle));
+                    ctx.beginPath();
+                    ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(200, 255, 220, ${alpha})`;
+                    ctx.fill();
+                });
+                animationId = requestAnimationFrame(draw);
+            }
+
+            resize();
+            window.addEventListener('resize', resize);
+            draw();
+        }
+
+        // --- HUD READOUTS (DATOS EN TIEMPO REAL) ---
+        function getStardate() {
+            const d = new Date();
+            const year = d.getFullYear();
+            const start = new Date(year, 0, 0);
+            const diff = d - start;
+            const dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const fraction = (d.getHours() * 3600 + d.getMinutes() * 60 + d.getSeconds()) / (24 * 3600);
+            const value = year + (dayOfYear + fraction) / 365;
+            return value.toFixed(3);
+        }
+
+        function updateHUDReadouts() {
+            const hull = 98 + Math.random() * 2;
+            const o2 = 99 + Math.random() * 1;
+            const pwr = 96 + Math.random() * 4;
+            document.getElementById('hud-stardate').textContent = getStardate();
+            document.getElementById('hud-hull').textContent = Math.round(hull) + '%';
+            document.getElementById('hud-o2').textContent = Math.round(o2) + '%';
+            document.getElementById('hud-power').textContent = Math.round(pwr) + '%';
+            const hullEl = document.getElementById('gauge-hull');
+            const o2El = document.getElementById('gauge-o2');
+            const pwrEl = document.getElementById('gauge-pwr');
+            if (hullEl) hullEl.style.width = hull + '%';
+            if (o2El) o2El.style.width = o2 + '%';
+            if (pwrEl) pwrEl.style.width = pwr + '%';
+            const hullTxt = document.getElementById('gauge-hull-txt');
+            const o2Txt = document.getElementById('gauge-o2-txt');
+            const pwrTxt = document.getElementById('gauge-pwr-txt');
+            if (hullTxt) hullTxt.textContent = Math.round(hull) + '%';
+            if (o2Txt) o2Txt.textContent = Math.round(o2) + '%';
+            if (pwrTxt) pwrTxt.textContent = Math.round(pwr) + '%';
+        }
+
+        function initHUDLoop() {
+            updateHUDReadouts();
+            setInterval(updateHUDReadouts, 2000);
+        }
+
         // --- MATRIX RAIN EFFECT ---
         function initMatrixCanvas() {
             const canvas = document.getElementById('matrixCanvas');
@@ -1198,6 +1617,8 @@
         // --- INITIALIZE APP ---
         window.onload = () => {
             initMatrixCanvas();
+            initStarfield();
+            initHUDLoop();
             renderSoundboard();
             initAiCanvas();
 
