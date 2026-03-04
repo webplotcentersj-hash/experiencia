@@ -609,13 +609,24 @@
             background: linear-gradient(90deg, transparent, var(--primary), transparent);
         }
 
+        .ai-robot-area { position: relative; margin-bottom: 0.5rem; }
+        .ai-speaking-badge {
+            display: none;
+            position: absolute;
+            bottom: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.75rem;
+            color: var(--secondary);
+            letter-spacing: 1px;
+        }
         .ai-visualizer {
-            height: 150px;
-            margin-bottom: 1rem;
+            height: 200px;
+            margin-bottom: 0;
             border: 1px solid var(--primary-dim);
-            border-radius: 8px;
-            background: rgba(0, 0, 0, 0.5);
-            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+            border-radius: 12px;
+            background: radial-gradient(ellipse at center, rgba(0,30,0,0.6), rgba(0,0,0,0.9));
+            box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 255, 65, 0.1);
         }
 
         #ai-canvas {
@@ -956,8 +967,11 @@
                     <span class="ai-subtitle">PLOT AI · Nave Plot · Plot Center</span>
                 </div>
             </div>
-            <div class="ai-visualizer">
-                <canvas id="ai-canvas"></canvas>
+            <div class="ai-robot-area">
+                <div class="ai-visualizer">
+                    <canvas id="ai-canvas"></canvas>
+                </div>
+                <div class="ai-speaking-badge" id="ai-speaking-badge" aria-hidden="true">🔊 Hablando...</div>
             </div>
             <div class="ai-chat-log" id="ai-chat-log">
                 <p class="ai-msg">IA: Soy PLOT AI v2.5. Sistemas en línea.</p>
@@ -1006,6 +1020,7 @@
         let recognition = null;
         let isRecognizing = false;
         let isAiSpeaking = false;
+        let isAiThinking = false;
         let inactivityTimer;
 
         // --- CONFIGURACIÓN ---
@@ -1084,21 +1099,31 @@
         }
 
         function speak(text, onEndCallback) {
-            speechSynthesis.cancel(); // Stop any previous speech
+            if (!text || typeof text !== 'string') return;
+            speechSynthesis.cancel();
             const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'es-AR';
             const voices = speechSynthesis.getVoices();
-
-            let selectedVoice = voices.find(v => v.lang.startsWith('es-LA') || v.lang.startsWith('es-ES')) || voices.find(v => v.lang.startsWith('es')) || voices[0];
-
-            utterance.voice = selectedVoice;
-            utterance.pitch = 0.8;
-            utterance.rate = 0.9;
+            const selectedVoice = voices.find(v => v.lang.startsWith('es')) || voices[0];
+            if (selectedVoice) utterance.voice = selectedVoice;
+            utterance.pitch = 0.9;
+            utterance.rate = 0.92;
             utterance.volume = 1.0;
-            utterance.onstart = () => { isAiSpeaking = true; };
-            utterance.onend = () => {
+            utterance.onstart = () => {
+                isAiSpeaking = true;
+                const badge = document.getElementById('ai-speaking-badge');
+                if (badge) badge.style.display = 'block';
+            };
+            utterance.onend = utterance.onerror = () => {
                 isAiSpeaking = false;
+                const badge = document.getElementById('ai-speaking-badge');
+                if (badge) badge.style.display = 'none';
                 if (onEndCallback) onEndCallback();
             };
+            if (voices.length === 0) {
+                setTimeout(() => speak(text, onEndCallback), 300);
+                return;
+            }
             speechSynthesis.speak(utterance);
         }
 
@@ -1399,8 +1424,12 @@
         let chatHistory = [];
 
         function showAiChat() {
+            speechSynthesis.getVoices();
             aiChatContainer.style.display = 'flex';
             document.getElementById('status').textContent = '📡 CONECTANDO CON IA...';
+            if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            }
         }
 
         function hideAiChat() {
@@ -1415,6 +1444,7 @@
             addMessageToLog('Comandante', userPrompt, 'user-msg');
             aiInput.value = '';
             aiSendBtn.disabled = true;
+            isAiThinking = true;
             addMessageToLog('IA', 'PENSANDO...', 'ai-msg', true);
             const lowerCasePrompt = userPrompt.toLowerCase();
             const selfIntroKeywords = ['quién eres', 'quien eres', 'presentate', 'eres tu'];
@@ -1423,6 +1453,7 @@
             if (selfIntroKeywords.some(keyword => lowerCasePrompt.includes(keyword))) {
                 const introResponse = "Soy PLOT AI, el asistente de a bordo de la Nave Plot. Conozco Plot Center: es nuestra comunidad de exploradores creativos. Estoy aquí para ayudarte, comandante.";
                 setTimeout(() => {
+                    isAiThinking = false;
                     updateLastMessage('IA', introResponse, 'ai-msg');
                     speak(introResponse);
                     aiSendBtn.disabled = false;
@@ -1434,6 +1465,7 @@
             if (plotCenterKeywords.some(keyword => lowerCasePrompt.includes(keyword))) {
                 const thematicResponse = "Plot Center es el viaje, no el destino, comandante. Una odisea por la creatividad digital. Crear, conectar y explorar lo desconocido. Bienvenido a bordo.";
                 setTimeout(() => {
+                    isAiThinking = false;
                     updateLastMessage('IA', thematicResponse, 'ai-msg');
                     speak(thematicResponse);
                     aiSendBtn.disabled = false;
@@ -1486,11 +1518,13 @@
                 chatHistory.push({ role: "model", parts: [{ text: fullText }] });
                 if (fullText) speak(fullText);
             } catch (error) {
+                isAiThinking = false;
                 console.error("Error communicating with AI:", error);
                 const msg = error?.message || 'Error desconocido';
                 const userMsg = msg.includes('API Key') ? '⚠️ Servidor sin API Key. Configura GEMINI_API_KEY en Vercel.' : (msg.includes('Failed to fetch') || msg.includes('NetworkError') ? '⚠️ No se pudo conectar. ¿Estás en la URL desplegada (Vercel)?' : `⚠️ ${msg}`);
                 updateLastMessage('IA', userMsg, 'ai-msg');
             } finally {
+                isAiThinking = false;
                 aiSendBtn.disabled = false;
                 aiInput.focus();
             }
@@ -1622,7 +1656,7 @@
             }
         }
 
-        // --- AI VISUALIZER ---
+        // --- ROBOT FACE (ojos que reaccionan: idle / pensando / hablando) ---
         function initAiCanvas() {
             const canvas = document.getElementById('ai-canvas');
             const ctx = canvas.getContext('2d');
@@ -1634,32 +1668,66 @@
             }
 
             function draw() {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                const centerX = canvas.width / 2;
-                const centerY = canvas.height / 2;
-                ctx.strokeStyle = '#00ff00';
+                const w = canvas.width;
+                const h = canvas.height;
+                ctx.clearRect(0, 0, w, h);
+                const centerX = w / 2;
+                const centerY = h / 2;
+                const scale = Math.min(w, h) / 200;
+                const headR = 55 * scale;
+                const eyeOffsetX = 22 * scale;
+                const eyeY = centerY - 8 * scale;
+                const eyeR = 12 * scale;
+                const pupilR = 5 * scale;
+                const mouthY = centerY + 28 * scale;
+                const mouthW = 45 * scale;
+
+                ctx.strokeStyle = '#00ff41';
+                ctx.fillStyle = 'rgba(0, 20, 0, 0.6)';
                 ctx.lineWidth = 2;
-                ctx.shadowBlur = 10;
-                ctx.shadowColor = '#00ff00';
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = '#00ff41';
                 ctx.beginPath();
-                ctx.arc(centerX, centerY, 50, 0, Math.PI * 2);
-                ctx.stroke();
-                const eyeRadius = 10 + Math.sin(frame * 0.05) * 2;
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, eyeRadius, 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(0, 255, 0, ${0.5 + Math.sin(frame * 0.07) * 0.2})`;
+                ctx.arc(centerX, centerY, headR, 0, Math.PI * 2);
                 ctx.fill();
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+
+                const blink = Math.sin(frame * 0.08) > 0.96 && !isAiSpeaking ? 0.25 : 1;
+                const thinkMove = isAiThinking ? Math.sin(frame * 0.2) * 3 : 0;
+                [1, -1].forEach((side, i) => {
+                    const ex = centerX + side * eyeOffsetX + thinkMove * side;
+                    const ey = eyeY;
+                    ctx.fillStyle = 'rgba(0, 255, 65, 0.15)';
+                    ctx.beginPath();
+                    ctx.arc(ex, ey, eyeR * 1.1, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#00ff41';
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+                    const pupilScale = isAiSpeaking ? 0.7 + 0.3 * Math.sin(frame * 0.3) : (isAiThinking ? 0.9 : blink);
+                    ctx.fillStyle = '#00ff41';
+                    ctx.shadowColor = '#00ff41';
+                    ctx.shadowBlur = 8;
+                    ctx.beginPath();
+                    ctx.arc(ex, ey, pupilR * pupilScale, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                });
+
+                ctx.strokeStyle = '#00ff41';
+                ctx.lineWidth = 2;
                 ctx.beginPath();
                 if (isAiSpeaking) {
-                    for (let i = -40; i <= 40; i++) {
+                    for (let i = -mouthW; i <= mouthW; i += 4) {
                         const x = centerX + i;
-                        const y = centerY + 35 + Math.sin(i * 0.2 + frame * 0.2) * 10;
-                        if (i === -40) ctx.moveTo(x, y);
+                        const y = mouthY + Math.sin(i * 0.15 + frame * 0.25) * 8;
+                        if (i === -mouthW) ctx.moveTo(x, y);
                         else ctx.lineTo(x, y);
                     }
                 } else {
-                    ctx.moveTo(centerX - 40, centerY + 35);
-                    ctx.lineTo(centerX + 40, centerY + 35);
+                    ctx.moveTo(centerX - mouthW, mouthY);
+                    ctx.lineTo(centerX + mouthW, mouthY);
                 }
                 ctx.stroke();
                 frame++;
