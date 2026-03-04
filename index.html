@@ -1543,6 +1543,8 @@
 
         function showAiChat() {
             speechSynthesis.getVoices();
+            clearTimeout(inactivityTimer);
+            inactivityTimer = null;
             if (aiChatContainer) aiChatContainer.style.display = 'flex';
             const statusEl = document.getElementById('status');
             if (statusEl) statusEl.textContent = '📡 CONECTANDO CON IA...';
@@ -1558,6 +1560,7 @@
         function hideAiChat() {
             stopCamera();
             if (aiChatContainer) aiChatContainer.style.display = 'none';
+            resetInactivityTimer();
             if (isRecognizing && recognition) try { recognition.stop(); } catch (_) {}
             const statusEl = document.getElementById('status');
             if (statusEl) statusEl.textContent = 'DISCONNECTED FROM AI.';
@@ -2043,10 +2046,11 @@
             });
         }
 
-        // --- SCREENSAVER ---
+        // --- SCREENSAVER --- (no se muestra durante la llamada)
         function showScreensaver() {
+            if (aiChatContainer && aiChatContainer.style.display === 'flex') return;
             const screensaver = document.getElementById('screensaver');
-            screensaver.style.display = 'flex';
+            if (screensaver) screensaver.style.display = 'flex';
         }
 
         function hideScreensaver() {
@@ -2106,6 +2110,25 @@
                     speechSynthesis.getVoices();
                 }
             }, 200);
+
+            // Pantalla completa en toda la app: intento al cargar + al primer toque/clic si el navegador bloquea
+            function goFullscreenOnce() {
+                if (document.fullscreenElement) return;
+                if (document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen().catch(() => {});
+                }
+                window.removeEventListener('click', goFullscreenOnce);
+                window.removeEventListener('touchstart', goFullscreenOnce);
+                window.removeEventListener('keydown', goFullscreenOnce);
+            }
+            window.addEventListener('click', goFullscreenOnce, { once: true });
+            window.addEventListener('touchstart', goFullscreenOnce, { once: true });
+            window.addEventListener('keydown', goFullscreenOnce, { once: true });
+            setTimeout(function () {
+                if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen().catch(function () {});
+                }
+            }, 300);
 
             // Init Screensaver
             window.addEventListener('mousemove', resetInactivityTimer);
