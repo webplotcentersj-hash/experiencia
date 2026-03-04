@@ -1577,6 +1577,8 @@
 
             if (selfIntroKeywords.some(keyword => lowerCasePrompt.includes(keyword))) {
                 const introResponse = "Soy PLOT AI, vuestra anfitriona a bordo de la Nave Plot. Conozco Plot Center y estoy aquí para recibirte y ayudarte, comandante.";
+                chatHistory.push({ role: "user", parts: [{ text: userPrompt }] });
+                chatHistory.push({ role: "model", parts: [{ text: introResponse }] });
                 setTimeout(() => {
                     isAiThinking = false;
                     updateLastMessage('IA', introResponse, 'ai-msg');
@@ -1589,6 +1591,8 @@
 
             if (plotCenterKeywords.some(keyword => lowerCasePrompt.includes(keyword))) {
                 const thematicResponse = "Plot Center es el viaje, no el destino, comandante. Una odisea por la creatividad digital. Crear, conectar y explorar. Bienvenido a bordo.";
+                chatHistory.push({ role: "user", parts: [{ text: userPrompt }] });
+                chatHistory.push({ role: "model", parts: [{ text: thematicResponse }] });
                 setTimeout(() => {
                     isAiThinking = false;
                     updateLastMessage('IA', thematicResponse, 'ai-msg');
