@@ -371,8 +371,11 @@
         @media (max-width: 768px) {
             .modal-container { padding: 0.5rem; align-items: flex-start; overflow-y: auto; }
             .modal-window { max-height: 90vh; min-height: 280px; padding: 1rem; overflow: hidden; display: flex; flex-direction: column; }
+            .ai-modal-header { flex-wrap: wrap; }
+            .ai-mode-toggle { margin-left: 0; margin-top: 0.5rem; width: 100%; }
             .ai-visualizer { height: 100px; min-height: 100px; }
             .ai-chat-log { min-height: 120px; max-height: 40vh; padding: 1rem; font-size: 1rem; }
+            .ai-call-talk-btn { width: 140px; height: 140px; font-size: 0.75rem; }
             .ai-input-area { flex-wrap: wrap; height: auto; gap: 0.5rem; }
             #ai-input { min-height: 44px; font-size: 16px; }
             .action-btn { min-height: 44px; min-width: 44px; padding: 0.5rem 1rem; }
@@ -732,6 +735,68 @@
             letter-spacing: 1px;
         }
 
+        .ai-mode-toggle {
+            margin-left: auto;
+            padding: 0.4rem 0.75rem;
+            font-size: 0.7rem;
+            font-family: 'Orbitron', sans-serif;
+            background: rgba(0, 210, 255, 0.15);
+            border: 1px solid var(--secondary);
+            color: var(--secondary);
+            border-radius: 6px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .ai-mode-toggle:hover { background: rgba(0, 210, 255, 0.25); }
+
+        .ai-call-area {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem 0;
+            gap: 1rem;
+        }
+        .ai-modal.call-mode .ai-call-area { display: flex; }
+        .ai-modal.call-mode .ai-input-area { display: none; }
+        .ai-modal.call-mode .ai-chat-log { max-height: 120px; min-height: 80px; }
+        .ai-call-hint {
+            font-size: 0.9rem;
+            color: rgba(0, 255, 65, 0.8);
+            text-align: center;
+        }
+        .ai-call-talk-btn {
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            border: 3px solid var(--primary);
+            background: radial-gradient(circle at 30% 30%, rgba(0, 255, 65, 0.2), rgba(0, 15, 0, 0.9));
+            color: var(--primary);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.85rem;
+            font-weight: bold;
+            text-align: center;
+            line-height: 1.2;
+            cursor: pointer;
+            box-shadow: 0 0 30px rgba(0, 255, 65, 0.3), inset 0 0 20px rgba(0, 255, 65, 0.05);
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+        .ai-call-talk-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 40px rgba(0, 255, 65, 0.4);
+        }
+        .ai-call-talk-btn:active, .ai-call-talk-btn.listening {
+            transform: scale(0.98);
+            background: radial-gradient(circle at 30% 30%, rgba(255, 0, 64, 0.25), rgba(20, 0, 0, 0.9));
+            border-color: var(--danger);
+            box-shadow: 0 0 35px rgba(255, 0, 64, 0.4);
+            animation: call-pulse 1s ease-in-out infinite;
+        }
+        @keyframes call-pulse {
+            0%, 100% { box-shadow: 0 0 35px rgba(255, 0, 64, 0.4); }
+            50% { box-shadow: 0 0 50px rgba(255, 0, 64, 0.6); }
+        }
+
         .ai-input-area {
             display: flex;
             gap: 10px;
@@ -966,6 +1031,7 @@
                     <h3>COMUNICACIÓN IA</h3>
                     <span class="ai-subtitle">PLOT AI · Nave Plot · Plot Center</span>
                 </div>
+                <button type="button" id="ai-mode-toggle" class="ai-mode-toggle" title="Cambiar a modo llamada">📞 Modo llamada</button>
             </div>
             <div class="ai-robot-area">
                 <div class="ai-visualizer">
@@ -976,7 +1042,11 @@
             <div class="ai-chat-log" id="ai-chat-log">
                 <p class="ai-msg">IA: Soy PLOT AI v2.5. Sistemas en línea.</p>
             </div>
-            <div class="ai-input-area">
+            <div class="ai-call-area" id="ai-call-area">
+                <p class="ai-call-hint" id="ai-call-hint">Tocá el botón y hablá. PLOT AI te responde por voz.</p>
+                <button type="button" id="ai-call-talk-btn" class="ai-call-talk-btn">TOCA PARA HABLAR</button>
+            </div>
+            <div class="ai-input-area" id="ai-input-area">
                 <input type="text" id="ai-input" placeholder="Comando o consulta...">
                 <button id="ai-mic-btn" class="action-btn">🎤</button>
                 <button id="ai-send-btn" class="action-btn">ENVIAR</button>
@@ -1432,7 +1502,13 @@
         const aiSendBtn = document.getElementById('ai-send-btn');
         const aiCloseBtn = document.getElementById('ai-close-btn');
         const aiMicBtn = document.getElementById('ai-mic-btn');
+        const aiModeToggle = document.getElementById('ai-mode-toggle');
+        const aiModal = document.querySelector('.ai-modal');
+        const aiCallArea = document.getElementById('ai-call-area');
+        const aiCallTalkBtn = document.getElementById('ai-call-talk-btn');
+        const aiCallHint = document.getElementById('ai-call-hint');
         let chatHistory = [];
+        let callMode = false;
 
         function showAiChat() {
             speechSynthesis.getVoices();
@@ -1454,9 +1530,10 @@
             if (statusEl) statusEl.textContent = 'DISCONNECTED FROM AI.';
         }
 
-        async function sendMessageToAI() {
-            const userPrompt = aiInput.value.trim();
+        async function sendMessageToAI(voiceText) {
+            const userPrompt = (typeof voiceText === 'string' ? voiceText : (aiInput && aiInput.value) ? aiInput.value.trim() : '').trim();
             if (!userPrompt) return;
+            if (aiInput && !voiceText) aiInput.value = '';
             addMessageToLog('Comandante', userPrompt, 'user-msg');
             aiInput.value = '';
             aiSendBtn.disabled = true;
@@ -1553,14 +1630,20 @@
                 if (fullText) speak(fullText);
             } catch (error) {
                 isAiThinking = false;
+                if (callMode && aiCallHint) aiCallHint.textContent = 'Error. Tocá de nuevo para hablar.';
                 console.error("Error communicating with AI:", error);
                 const msg = (error && error.message) ? String(error.message) : 'Error desconocido';
                 const userMsg = msg.includes('API Key') ? '⚠️ Servidor sin API Key. Configura GEMINI_API_KEY en Vercel.' : (msg.includes('Failed to fetch') || msg.includes('NetworkError') ? '⚠️ No se pudo conectar. ¿Estás en la URL desplegada (Vercel)?' : ('⚠️ ' + msg));
                 updateLastMessage('IA', userMsg, 'ai-msg');
             } finally {
                 isAiThinking = false;
-                aiSendBtn.disabled = false;
-                if (aiInput) aiInput.focus();
+                if (aiSendBtn) aiSendBtn.disabled = false;
+                if (aiInput) {
+                    if (callMode) aiInput.value = '';
+                    else aiInput.focus();
+                }
+                if (callMode && aiCallTalkBtn) aiCallTalkBtn.classList.remove('listening');
+                if (callMode && aiCallHint) aiCallHint.textContent = 'Tocá el botón y hablá. PLOT AI te responde por voz.';
             }
         }
 
@@ -1619,8 +1702,10 @@
             recognition.onend = () => {
                 isRecognizing = false;
                 aiMicBtn.classList.remove('active');
-                if (aiInput.value.trim().length > 0) {
-                    sendMessageToAI();
+                if (aiCallTalkBtn) aiCallTalkBtn.classList.remove('listening');
+                if (aiCallHint && callMode) aiCallHint.textContent = 'Procesando...';
+                if (aiInput && aiInput.value.trim().length > 0) {
+                    sendMessageToAI(callMode ? aiInput.value.trim() : undefined);
                 }
             };
         }
@@ -1948,10 +2033,37 @@
             renderSoundboard();
             initAiCanvas();
 
-            aiSendBtn.addEventListener('click', sendMessageToAI);
+            aiSendBtn.addEventListener('click', () => sendMessageToAI());
             aiInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessageToAI(); });
             aiCloseBtn.addEventListener('click', hideAiChat);
             aiMicBtn.addEventListener('click', toggleVoiceRecognition);
+            if (aiModeToggle && aiModal) {
+                aiModeToggle.addEventListener('click', function () {
+                    callMode = !callMode;
+                    aiModal.classList.toggle('call-mode', callMode);
+                    aiModeToggle.textContent = callMode ? 'Modo chat' : 'Modo llamada';
+                });
+            }
+            if (aiCallTalkBtn && aiCallHint) {
+                aiCallTalkBtn.addEventListener('click', function () {
+                    if (!callMode) return;
+                    if (!recognition) {
+                        aiCallHint.textContent = 'Tu navegador no soporta voz. Usá modo chat.';
+                        return;
+                    }
+                    if (isRecognizing) {
+                        recognition.stop();
+                        return;
+                    }
+                    initAudio();
+                    speechSynthesis.cancel();
+                    aiInput.value = '';
+                    recognition.start();
+                    isRecognizing = true;
+                    aiCallTalkBtn.classList.add('listening');
+                    aiCallHint.textContent = 'Escuchando... Hablá ahora.';
+                });
+            }
 
             logGenerateBtn.addEventListener('click', generateLogEntry);
             logCloseBtn.addEventListener('click', hideLogGenerator);
