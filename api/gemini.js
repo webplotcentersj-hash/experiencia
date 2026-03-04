@@ -56,6 +56,9 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: "Falta 'contents' en el body" });
     }
 
+    const models = ["gemini-2.5-flash", "gemini-3-flash-preview"];
+    const opts = { contents, systemInstruction: SYSTEM_INSTRUCTION };
+
     try {
         const ai = new GoogleGenAI({ apiKey });
 
@@ -63,30 +66,39 @@ export default async function handler(req, res) {
             res.setHeader("Content-Type", "text/event-stream");
             res.setHeader("Cache-Control", "no-cache");
             res.setHeader("Connection", "keep-alive");
-            res.flushHeaders?.();
+            if (typeof res.flushHeaders === "function") res.flushHeaders();
 
-            const stream = ai.models.generateContentStream({
-                model: "gemini-3-flash-preview",
-                contents,
-                systemInstruction: SYSTEM_INSTRUCTION,
-            });
-            for await (const chunk of stream) {
-                const text = chunk.text ?? "";
-                if (text) res.write("data: " + JSON.stringify({ text }) + "\n\n");
+            let streamDone = false;
+            for (const model of models) {
+                try {
+                    const stream = ai.models.generateContentStream({ ...opts, model });
+                    for await (const chunk of stream) {
+                        const text = chunk.text ?? "";
+                        if (text) res.write("data: " + JSON.stringify({ text }) + "\n\n");
+                    }
+                    res.write("data: " + JSON.stringify({ done: true }) + "\n\n");
+                    streamDone = true;
+                    break;
+                } catch (streamErr) {
+                    console.warn("Stream model " + model + " failed:", streamErr?.message);
+                }
             }
-            res.write("data: " + JSON.stringify({ done: true }) + "\n\n");
+            if (!streamDone) res.write("data: " + JSON.stringify({ done: true }) + "\n\n");
             return res.end();
         }
 
-        const response = await ai.models.generateContent({
-            model: "gemini-3-flash-preview",
-            contents,
-            systemInstruction: SYSTEM_INSTRUCTION,
-        });
-        const text = response.text ?? "";
-        return res.status(200).json({
-            candidates: [{ content: { parts: [{ text }] } }],
-        });
+        for (const model of models) {
+            try {
+                const response = await ai.models.generateContent({ ...opts, model });
+                const text = response.text ?? "";
+                return res.status(200).json({
+                    candidates: [{ content: { parts: [{ text }] } }],
+                });
+            } catch (modelErr) {
+                console.warn("Model " + model + " failed:", modelErr?.message);
+            }
+        }
+        throw new Error("No model responded. Revisa la API Key y modelos disponibles.");
     } catch (error) {
         console.error("Server API Error:", error);
         const message = error?.message || String(error);
