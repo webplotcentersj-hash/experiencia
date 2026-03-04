@@ -372,11 +372,10 @@
             .modal-container { padding: 0.5rem; align-items: flex-start; overflow-y: auto; }
             .modal-window { max-height: 90vh; min-height: 280px; padding: 1rem; overflow: hidden; display: flex; flex-direction: column; }
             .ai-modal-header { flex-wrap: wrap; }
-            .ai-mode-toggle { margin-left: 0; margin-top: 0.5rem; width: 100%; }
+            .ai-camera-box { width: 100px; height: 75px; top: 0.5rem; right: 0.5rem; }
             .ai-visualizer { height: 100px; min-height: 100px; }
-            .ai-chat-log { min-height: 120px; max-height: 40vh; padding: 1rem; font-size: 1rem; }
+            .ai-chat-log { min-height: 100px; max-height: 25vh; padding: 0.75rem; font-size: 0.95rem; }
             .ai-call-talk-btn { width: 140px; height: 140px; font-size: 0.75rem; }
-            .ai-input-area { flex-wrap: wrap; height: auto; gap: 0.5rem; }
             #ai-input { min-height: 44px; font-size: 16px; }
             .action-btn { min-height: 44px; min-width: 44px; padding: 0.5rem 1rem; }
             .modal-close-btn { min-height: 48px; padding: 0.75rem; }
@@ -735,31 +734,46 @@
             letter-spacing: 1px;
         }
 
-        .ai-mode-toggle {
-            margin-left: auto;
-            padding: 0.4rem 0.75rem;
-            font-size: 0.7rem;
-            font-family: 'Orbitron', sans-serif;
-            background: rgba(0, 210, 255, 0.15);
-            border: 1px solid var(--secondary);
-            color: var(--secondary);
-            border-radius: 6px;
-            cursor: pointer;
-            white-space: nowrap;
+        .ai-camera-box {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            width: 140px;
+            height: 105px;
+            border: 2px solid var(--primary);
+            border-radius: 8px;
+            overflow: hidden;
+            background: #000;
+            z-index: 5;
+            box-shadow: 0 0 15px rgba(0, 255, 65, 0.3);
         }
-        .ai-mode-toggle:hover { background: rgba(0, 210, 255, 0.25); }
-
+        .ai-camera-box video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+        .ai-camera-label {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            font-size: 0.6rem;
+            font-family: 'Orbitron', sans-serif;
+            color: var(--primary);
+            background: rgba(0,0,0,0.8);
+            padding: 2px 6px;
+            text-align: center;
+        }
         .ai-call-area {
-            display: none;
+            display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             padding: 1rem 0;
             gap: 1rem;
         }
-        .ai-modal.call-mode .ai-call-area { display: flex; }
-        .ai-modal.call-mode .ai-input-area { display: none; }
-        .ai-modal.call-mode .ai-chat-log { max-height: 120px; min-height: 80px; }
+        .ai-modal .ai-chat-log { max-height: 120px; min-height: 80px; }
         .ai-call-hint {
             font-size: 0.9rem;
             color: rgba(0, 255, 65, 0.8);
@@ -1021,7 +1035,11 @@
 
     <!-- AI Chat Window -->
     <div id="ai-chat-container" class="modal-container">
-        <div class="modal-window ai-modal">
+        <div class="modal-window ai-modal call-mode">
+            <div class="ai-camera-box" id="ai-camera-box">
+                <video id="ai-camera" autoplay playsinline muted></video>
+                <span class="ai-camera-label">TRIPULACIÓN</span>
+            </div>
             <div class="ai-modal-header">
                 <div class="ai-robot-icon">
                     <span class="ai-robot-eye"></span>
@@ -1029,9 +1047,8 @@
                 </div>
                 <div class="ai-modal-title">
                     <h3>COMUNICACIÓN IA</h3>
-                    <span class="ai-subtitle">PLOT AI · Nave Plot · Plot Center</span>
+                    <span class="ai-subtitle">PLOT AI · Anfitriona · Nave Plot</span>
                 </div>
-                <button type="button" id="ai-mode-toggle" class="ai-mode-toggle" title="Cambiar a modo llamada">📞 Modo llamada</button>
             </div>
             <div class="ai-robot-area">
                 <div class="ai-visualizer">
@@ -1040,17 +1057,13 @@
                 <div class="ai-speaking-badge" id="ai-speaking-badge" aria-hidden="true">🔊 Hablando...</div>
             </div>
             <div class="ai-chat-log" id="ai-chat-log">
-                <p class="ai-msg">IA: Soy PLOT AI v2.5. Sistemas en línea.</p>
+                <p class="ai-msg">IA: Soy PLOT AI, vuestra anfitriona a bordo. Tocá el botón y hablá conmigo.</p>
             </div>
             <div class="ai-call-area" id="ai-call-area">
-                <p class="ai-call-hint" id="ai-call-hint">Tocá el botón y hablá. PLOT AI te responde por voz.</p>
+                <p class="ai-call-hint" id="ai-call-hint">Tocá el botón y hablá. Te respondo por voz.</p>
                 <button type="button" id="ai-call-talk-btn" class="ai-call-talk-btn">TOCA PARA HABLAR</button>
             </div>
-            <div class="ai-input-area" id="ai-input-area">
-                <input type="text" id="ai-input" placeholder="Comando o consulta...">
-                <button id="ai-mic-btn" class="action-btn">🎤</button>
-                <button id="ai-send-btn" class="action-btn">ENVIAR</button>
-            </div>
+            <input type="hidden" id="ai-input" aria-hidden="true">
             <button id="ai-close-btn" class="modal-close-btn">FINALIZAR TRANSMISIÓN</button>
         </div>
     </div>
@@ -1499,16 +1512,34 @@
         const aiChatContainer = document.getElementById('ai-chat-container');
         const aiChatLog = document.getElementById('ai-chat-log');
         const aiInput = document.getElementById('ai-input');
-        const aiSendBtn = document.getElementById('ai-send-btn');
         const aiCloseBtn = document.getElementById('ai-close-btn');
-        const aiMicBtn = document.getElementById('ai-mic-btn');
-        const aiModeToggle = document.getElementById('ai-mode-toggle');
-        const aiModal = document.querySelector('.ai-modal');
-        const aiCallArea = document.getElementById('ai-call-area');
         const aiCallTalkBtn = document.getElementById('ai-call-talk-btn');
         const aiCallHint = document.getElementById('ai-call-hint');
+        const aiCamera = document.getElementById('ai-camera');
         let chatHistory = [];
-        let callMode = false;
+        let cameraStream = null;
+
+        function startCamera() {
+            if (!aiCamera || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false })
+                .then(function (stream) {
+                    cameraStream = stream;
+                    aiCamera.srcObject = stream;
+                })
+                .catch(function () {
+                    if (document.getElementById('ai-camera-box')) {
+                        document.getElementById('ai-camera-box').style.display = 'none';
+                    }
+                });
+        }
+
+        function stopCamera() {
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(function (t) { t.stop(); });
+                cameraStream = null;
+            }
+            if (aiCamera) aiCamera.srcObject = null;
+        }
 
         function showAiChat() {
             speechSynthesis.getVoices();
@@ -1518,12 +1549,14 @@
             if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
                 document.documentElement.requestFullscreen().catch(() => {});
             }
-            setTimeout(function resizeAiCanvasWhenVisible() {
+            setTimeout(function () {
                 if (window.resizeAiCanvas) window.resizeAiCanvas();
             }, 150);
+            startCamera();
         }
 
         function hideAiChat() {
+            stopCamera();
             if (aiChatContainer) aiChatContainer.style.display = 'none';
             if (isRecognizing && recognition) try { recognition.stop(); } catch (_) {}
             const statusEl = document.getElementById('status');
@@ -1533,10 +1566,9 @@
         async function sendMessageToAI(voiceText) {
             const userPrompt = (typeof voiceText === 'string' ? voiceText : (aiInput && aiInput.value) ? aiInput.value.trim() : '').trim();
             if (!userPrompt) return;
-            if (aiInput && !voiceText) aiInput.value = '';
+            if (aiInput) aiInput.value = '';
             addMessageToLog('Comandante', userPrompt, 'user-msg');
-            aiInput.value = '';
-            aiSendBtn.disabled = true;
+            if (aiCallTalkBtn) aiCallTalkBtn.disabled = true;
             isAiThinking = true;
             addMessageToLog('IA', 'PENSANDO...', 'ai-msg', true);
             const lowerCasePrompt = userPrompt.toLowerCase();
@@ -1544,25 +1576,25 @@
             const plotCenterKeywords = ['plot center', 'viaje', 'qué es esto', 'que es esto', 'misión', 'proposito'];
 
             if (selfIntroKeywords.some(keyword => lowerCasePrompt.includes(keyword))) {
-                const introResponse = "Soy PLOT AI, el asistente de a bordo de la Nave Plot. Conozco Plot Center: es nuestra comunidad de exploradores creativos. Estoy aquí para ayudarte, comandante.";
+                const introResponse = "Soy PLOT AI, vuestra anfitriona a bordo de la Nave Plot. Conozco Plot Center y estoy aquí para recibirte y ayudarte, comandante.";
                 setTimeout(() => {
                     isAiThinking = false;
                     updateLastMessage('IA', introResponse, 'ai-msg');
                     speak(introResponse);
-                    aiSendBtn.disabled = false;
-                    aiInput.focus();
+                    if (aiCallTalkBtn) aiCallTalkBtn.disabled = false;
+                    if (aiCallHint) aiCallHint.textContent = 'Tocá el botón y hablá. Te respondo por voz.';
                 }, 1200);
                 return;
             }
 
             if (plotCenterKeywords.some(keyword => lowerCasePrompt.includes(keyword))) {
-                const thematicResponse = "Plot Center es el viaje, no el destino, comandante. Una odisea por la creatividad digital. Crear, conectar y explorar lo desconocido. Bienvenido a bordo.";
+                const thematicResponse = "Plot Center es el viaje, no el destino, comandante. Una odisea por la creatividad digital. Crear, conectar y explorar. Bienvenido a bordo.";
                 setTimeout(() => {
                     isAiThinking = false;
                     updateLastMessage('IA', thematicResponse, 'ai-msg');
                     speak(thematicResponse);
-                    aiSendBtn.disabled = false;
-                    aiInput.focus();
+                    if (aiCallTalkBtn) aiCallTalkBtn.disabled = false;
+                    if (aiCallHint) aiCallHint.textContent = 'Tocá el botón y hablá. Te respondo por voz.';
                 }, 1500);
                 return;
             }
@@ -1630,20 +1662,16 @@
                 if (fullText) speak(fullText);
             } catch (error) {
                 isAiThinking = false;
-                if (callMode && aiCallHint) aiCallHint.textContent = 'Error. Tocá de nuevo para hablar.';
+                if (aiCallHint) aiCallHint.textContent = 'Error. Tocá de nuevo para hablar.';
                 console.error("Error communicating with AI:", error);
                 const msg = (error && error.message) ? String(error.message) : 'Error desconocido';
                 const userMsg = msg.includes('API Key') ? '⚠️ Servidor sin API Key. Configura GEMINI_API_KEY en Vercel.' : (msg.includes('Failed to fetch') || msg.includes('NetworkError') ? '⚠️ No se pudo conectar. ¿Estás en la URL desplegada (Vercel)?' : ('⚠️ ' + msg));
                 updateLastMessage('IA', userMsg, 'ai-msg');
             } finally {
                 isAiThinking = false;
-                if (aiSendBtn) aiSendBtn.disabled = false;
-                if (aiInput) {
-                    if (callMode) aiInput.value = '';
-                    else aiInput.focus();
-                }
-                if (callMode && aiCallTalkBtn) aiCallTalkBtn.classList.remove('listening');
-                if (callMode && aiCallHint) aiCallHint.textContent = 'Tocá el botón y hablá. PLOT AI te responde por voz.';
+                if (aiCallTalkBtn) aiCallTalkBtn.disabled = false;
+                if (aiCallTalkBtn) aiCallTalkBtn.classList.remove('listening');
+                if (aiCallHint) aiCallHint.textContent = 'Tocá el botón y hablá. Te respondo por voz.';
             }
         }
 
@@ -1682,7 +1710,7 @@
         function setupSpeechRecognition() {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (!SpeechRecognition) {
-                aiMicBtn.style.display = 'none';
+                if (aiCallHint) aiCallHint.textContent = 'Tu navegador no soporta voz.';
                 return;
             }
             recognition = new SpeechRecognition();
@@ -1691,21 +1719,22 @@
             recognition.interimResults = false;
             recognition.maxAlternatives = 1;
             recognition.onresult = (event) => {
-                aiInput.value = event.results[0][0].transcript;
+                if (aiInput) aiInput.value = event.results[0][0].transcript;
             };
             recognition.onerror = (event) => {
                 console.error('Speech recognition error:', event.error);
-                document.getElementById('status').textContent = `ERROR DE VOZ: ${event.error}`;
+                const statusEl = document.getElementById('status');
+                if (statusEl) statusEl.textContent = 'ERROR DE VOZ: ' + event.error;
                 isRecognizing = false;
-                aiMicBtn.classList.remove('active');
+                if (aiCallTalkBtn) aiCallTalkBtn.classList.remove('listening');
+                if (aiCallHint) aiCallHint.textContent = 'Tocá de nuevo para hablar.';
             };
             recognition.onend = () => {
                 isRecognizing = false;
-                aiMicBtn.classList.remove('active');
                 if (aiCallTalkBtn) aiCallTalkBtn.classList.remove('listening');
-                if (aiCallHint && callMode) aiCallHint.textContent = 'Procesando...';
+                if (aiCallHint) aiCallHint.textContent = 'Procesando...';
                 if (aiInput && aiInput.value.trim().length > 0) {
-                    sendMessageToAI(callMode ? aiInput.value.trim() : undefined);
+                    sendMessageToAI(aiInput.value.trim());
                 }
             };
         }
@@ -1719,8 +1748,10 @@
                 speechSynthesis.cancel();
                 recognition.start();
                 isRecognizing = true;
-                aiMicBtn.classList.add('active');
-                document.getElementById('status').textContent = '🎤 Escuchando...';
+                const micBtn = document.getElementById('ai-mic-btn');
+                if (micBtn) micBtn.classList.add('active');
+                const statusEl = document.getElementById('status');
+                if (statusEl) statusEl.textContent = 'Escuchando...';
             }
         }
 
@@ -2033,22 +2064,11 @@
             renderSoundboard();
             initAiCanvas();
 
-            aiSendBtn.addEventListener('click', () => sendMessageToAI());
-            aiInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessageToAI(); });
-            aiCloseBtn.addEventListener('click', hideAiChat);
-            aiMicBtn.addEventListener('click', toggleVoiceRecognition);
-            if (aiModeToggle && aiModal) {
-                aiModeToggle.addEventListener('click', function () {
-                    callMode = !callMode;
-                    aiModal.classList.toggle('call-mode', callMode);
-                    aiModeToggle.textContent = callMode ? 'Modo chat' : 'Modo llamada';
-                });
-            }
+            if (aiCloseBtn) aiCloseBtn.addEventListener('click', hideAiChat);
             if (aiCallTalkBtn && aiCallHint) {
                 aiCallTalkBtn.addEventListener('click', function () {
-                    if (!callMode) return;
                     if (!recognition) {
-                        aiCallHint.textContent = 'Tu navegador no soporta voz. Usá modo chat.';
+                        aiCallHint.textContent = 'Tu navegador no soporta voz.';
                         return;
                     }
                     if (isRecognizing) {
@@ -2057,7 +2077,7 @@
                     }
                     initAudio();
                     speechSynthesis.cancel();
-                    aiInput.value = '';
+                    if (aiInput) aiInput.value = '';
                     recognition.start();
                     isRecognizing = true;
                     aiCallTalkBtn.classList.add('listening');
